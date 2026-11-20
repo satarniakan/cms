@@ -82,7 +82,7 @@ export function SeoPanel({
 	defaultDescription,
 	inRoom = false,
 }: SeoPanelProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const titleId = React.useId();
 	const descriptionId = React.useId();
 	const canonicalId = React.useId();
@@ -259,7 +259,7 @@ export function SeoPanel({
 					dir="auto"
 				/>
 				<p id={`${descriptionId}-count`} className="text-xs leading-4 text-kumo-subtle">
-					{t`${draft.description.length}/160 characters`}
+					{t`${i18n.number(draft.description.length)}/160 characters`}
 				</p>
 			</div>
 

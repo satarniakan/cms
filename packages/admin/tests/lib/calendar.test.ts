@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fetchCalendarRange, type CalendarEntry } from "../../src/lib/api/calendar";
 import {
+	calendarMonth,
+	monthStartDay,
+	shiftMonth,
+	isMonthCutOff,
+	isMonthKey,
 	calendarState,
 	createCalendarDisplay,
 	dayKeyInZone,
@@ -25,6 +30,45 @@ describe("monthGridDays", () => {
 		expect(saturdayFirst[0]).toBe("2026-09-26");
 		expect(saturdayFirst.at(-1)).toBe("2026-11-06");
 		expect(saturdayFirst).toHaveLength(42);
+	});
+});
+
+describe("Persian calendar months", () => {
+	it("rejects Jalali months that would require five-digit Gregorian API years", () => {
+		expect(isMonthKey("1405-01", "fa")).toBe(true);
+		expect(isMonthKey("9378-09", "fa")).toBe(true);
+		expect(isMonthKey("9378-10", "fa")).toBe(false);
+		expect(isMonthKey("9999-12", "fa")).toBe(false);
+		expect(isMonthKey("9999-12", "en")).toBe(true);
+	});
+
+	it("keeps day keys Gregorian at Nowruz and shifts through the Jalali year boundary", () => {
+		expect(calendarMonth("2026-03-20", "fa")).toBe("1404-12");
+		expect(calendarMonth("2026-03-21", "fa")).toBe("1405-01");
+		expect(monthStartDay("1405-01", "fa")).toBe("2026-03-21");
+		expect(shiftMonth("1404-12", 1)).toBe("1405-01");
+		expect(shiftMonth("1405-01", -1)).toBe("1404-12");
+	});
+
+	it("builds Saturday-first grids with the correct leap and ordinary Esfand lengths", () => {
+		for (const [month, length] of [
+			["1403-12", 30],
+			["1404-12", 29],
+			["1405-01", 31],
+		] as const) {
+			const days = monthGridDays(month, 6, "fa");
+			expect(new Date(`${days[0]}T12:00:00Z`).getUTCDay()).toBe(6);
+			expect(days.length % 7).toBe(0);
+			expect(days.filter((day) => calendarMonth(day, "fa") === month)).toHaveLength(length);
+			const { from, to } = fetchRange(days);
+			expect(new Date(from).getUTCFullYear()).toBeGreaterThan(2020);
+			expect(Date.parse(to)).toBeGreaterThan(Date.parse(from));
+		}
+	});
+
+	it("compares a truncated range to the actual end of the Jalali month", () => {
+		expect(isMonthCutOff("1405-01", "2026-04-20", "fa")).toBe(true);
+		expect(isMonthCutOff("1405-01", "2026-04-21", "fa")).toBe(false);
 	});
 });
 
@@ -85,12 +129,16 @@ describe("createCalendarDisplay", () => {
 		expect(display.formatViewerTime(lateEvening)).toMatch(/^Fri,? 8:00 AM/);
 	});
 
-	it("formats entry dates on the Gregorian calendar the grid uses", () => {
+	it("formats Persian entries and headings on the Jalali calendar", () => {
 		const display = createCalendarDisplay({ ...options, locale: "fa", timeZone: "UTC" });
 		const when = display.formatDateTime(Date.parse("2026-10-15T15:00:00.000Z"));
 
-		expect(when).toContain("اکتبر");
-		expect(when).not.toContain("مهر");
+		expect(when).toContain("مهر");
+		expect(when).not.toContain("اکتبر");
+		expect(display.monthTitle("1405-01")).toBe("فروردین ۱۴۰۵");
+		expect(display.dayNumber("2026-03-21")).toBe("۱");
+		expect(display.isWeekend("2026-03-20")).toBe(true);
+		expect(display.isWeekend("2026-03-21")).toBe(false);
 	});
 
 	it("treats zones with the same name as the same, and falls back to UTC", () => {

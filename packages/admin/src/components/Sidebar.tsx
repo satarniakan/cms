@@ -669,6 +669,7 @@ export function buildNavGroups(input: NavBuildInput): NavGroup[] {
  */
 export function SidebarNav({ manifest }: SidebarNavProps) {
 	const { t } = useLingui();
+	const { open: sidebarOpen } = useSidebar();
 	// `_` is rebound on locale switches and catalog loads, so it invalidates the memo below.
 	const { _: translate, i18n } = useLinguiContext();
 	const location = useLocation();
@@ -773,7 +774,10 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 			</KumoSidebar.Content>
 
 			<KumoSidebar.Footer className="gap-0">
-				<KumoSidebar.Trigger className="rtl:rotate-180" />
+				<KumoSidebar.Trigger
+					className="rtl:rotate-180"
+					aria-label={sidebarOpen ? t`Collapse sidebar` : t`Expand sidebar`}
+				/>
 				<div className="min-w-0 flex-1 overflow-hidden">
 					<p
 						data-testid="admin-version"

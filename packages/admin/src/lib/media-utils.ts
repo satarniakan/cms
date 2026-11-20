@@ -286,10 +286,33 @@ export function getFileIcon(mimeType: string): string {
 	return "📁";
 }
 
-export function formatFileSize(bytes: number): string {
-	if (bytes === 0) return "0 B";
-	const k = 1024;
-	const sizes = ["B", "KB", "MB", "GB"];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+const BYTE_SCALE = { divisor: 1, unit: "byte" } as const;
+
+const FILE_SIZE_SCALES = [
+	{ divisor: 1024 ** 3, unit: "gigabyte" },
+	{ divisor: 1024 ** 2, unit: "megabyte" },
+	{ divisor: 1024, unit: "kilobyte" },
+	BYTE_SCALE,
+] as const;
+
+export function formatFileSize(bytes: number, locale?: string): string {
+	if (locale !== "fa") {
+		if (bytes === 0) return "0 B";
+		const k = 1024;
+		const sizes = ["B", "KB", "MB", "GB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+	}
+	const scale = FILE_SIZE_SCALES.find((entry) => Math.abs(bytes) >= entry.divisor) ?? BYTE_SCALE;
+	return new Intl.NumberFormat(locale, {
+		style: "unit",
+		unit: scale.unit,
+		unitDisplay: "long",
+		maximumFractionDigits: scale.divisor === 1 ? 0 : 1,
+	}).format(bytes / scale.divisor);
+}
+
+/** Pixel measurements keep ungrouped digits, so a width never reads as a length list. */
+export function formatPixels(value: number, locale: string): string {
+	return new Intl.NumberFormat(locale, { useGrouping: false }).format(value);
 }

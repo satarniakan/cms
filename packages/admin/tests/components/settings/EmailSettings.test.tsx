@@ -1,4 +1,5 @@
 import { Toasty } from "@cloudflare/kumo";
+import { i18n } from "@lingui/core";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -66,6 +67,61 @@ beforeEach(() => {
 });
 
 describe("EmailSettings", () => {
+	it("normalizes Persian SMTP ports, preserves explicit security, and never sends an email on save", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			mockFetchEmailSettings.mockResolvedValue({
+				...availableSettings,
+				selectedProviderId: "emdash-builtin-smtp",
+			});
+			const screen = await renderEmailSettings();
+			await screen.getByLabelText("SMTP Host").fill("smtp.example.com");
+			await screen.getByLabelText("Username").fill("mailer123");
+			const port = screen.getByLabelText("Port", { exact: true });
+			await expect.element(port).toHaveValue("۵۸۷");
+			await port.fill("۴۶۵");
+			await expect
+				.element(screen.getByRole("combobox", { name: "Security" }))
+				.toHaveTextContent("Implicit TLS");
+			await screen.getByRole("combobox", { name: "Security" }).click();
+			await screen.getByRole("option", { name: "STARTTLS (port 587)" }).click();
+			for (const text of ["٢٥٢٥", "2525"]) {
+				await port.fill(text);
+				await expect.element(port).toHaveValue("۲۵۲۵");
+			}
+			await port.fill("۴۶۵");
+			await expect
+				.element(screen.getByRole("combobox", { name: "Security" }))
+				.toHaveTextContent("STARTTLS");
+			await screen.getByRole("button", { name: "Save Settings" }).click();
+			await vi.waitFor(() =>
+				expect(mockSaveEmailSettings).toHaveBeenCalledExactlyOnceWith({
+					provider: "smtp",
+					smtp: { host: "smtp.example.com", port: 465, secure: "starttls", user: "mailer123" },
+				}),
+			);
+			expect(mockSendTestEmail).not.toHaveBeenCalled();
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
+	});
+
+	it("rejects empty, fractional and out-of-range SMTP ports rather than truncating them", async () => {
+		mockFetchEmailSettings.mockResolvedValue({
+			...availableSettings,
+			selectedProviderId: "emdash-builtin-smtp",
+		});
+		const screen = await renderEmailSettings();
+		await screen.getByLabelText("SMTP Host").fill("smtp.example.com");
+		await screen.getByLabelText("Username").fill("mailer");
+		for (const text of ["587.5", "", "0", "65536"]) {
+			await screen.getByLabelText("Port", { exact: true }).fill(text);
+			await screen.getByRole("button", { name: "Save Settings" }).click();
+			expect(mockSaveEmailSettings).not.toHaveBeenCalled();
+		}
+	});
+
 	it("shows the shared frame while email settings load", async () => {
 		mockFetchEmailSettings.mockReturnValue(new Promise(() => undefined));
 		const screen = await renderEmailSettings();

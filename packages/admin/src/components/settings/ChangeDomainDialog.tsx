@@ -65,7 +65,7 @@ export function ChangeDomainDialog({
 	onClose,
 	onChanged,
 }: ChangeDomainDialogProps) {
-	const { t } = useLingui();
+	const { t, i18n: localeI18n } = useLingui();
 	const [domain, setDomain] = React.useState("");
 	const [submitted, setSubmitted] = React.useState(false);
 	const formId = React.useId();
@@ -151,7 +151,10 @@ export function ChangeDomainDialog({
 				</LayerDialog.Description>
 				<LayerDialog.Body>
 					<form ref={formRef} id={formId} onSubmit={submit} noValidate className="grid gap-5">
-						<ol className="grid list-decimal gap-2 ps-5 text-sm">
+						<ol
+							className="grid gap-2 ps-5 text-sm"
+							style={{ listStyleType: localeI18n.locale === "fa" ? "persian" : "decimal" }}
+						>
 							<li>
 								{t`Point the domain at this site. On Cloudflare, open your Worker in Workers & Pages, go to the Domains tab, and add the domain.`}
 							</li>

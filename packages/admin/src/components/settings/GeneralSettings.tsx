@@ -20,6 +20,7 @@ import { ArrowSquareOut, WarningCircle, Upload, X } from "@phosphor-icons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, type Locale } from "date-fns";
 import * as React from "react";
+import { faIR, getDateLib } from "react-day-picker/persian";
 
 import {
 	createSignInHandover,
@@ -36,6 +37,7 @@ import {
 import { useCurrentUser } from "../../lib/api/current-user.js";
 import { useDateLocale } from "../../locales/date-locale.js";
 import { ConfirmDialog } from "../ConfirmDialog.js";
+import { LocalizedNumberInput } from "../LocalizedNumberInput.js";
 import { MediaPickerModal } from "../MediaPickerModal";
 import { SaveButton } from "../SaveButton.js";
 import { ChangeDomainDialog } from "./ChangeDomainDialog.js";
@@ -45,9 +47,12 @@ const ROLE_ADMIN = 50;
 
 const timezones = ["UTC", ...Intl.supportedValuesOf("timeZone")];
 const exampleDate = new Date(2026, 0, 23);
-function datePreview(pattern: string, locale: Locale): string | null {
+function datePreview(pattern: string, locale: Locale, language: string): string | null {
 	try {
-		return pattern.trim() ? format(exampleDate, pattern, { locale }) : null;
+		if (!pattern.trim()) return null;
+		return language === "fa"
+			? getDateLib({ locale: faIR, numerals: "arabext" }).format(exampleDate, pattern)
+			: format(exampleDate, pattern, { locale });
 	} catch {
 		return null;
 	}
@@ -62,13 +67,17 @@ function isValidTimezone(timezone: string): boolean {
 	}
 }
 
-function generalSettingsSnapshot(settings: SiteSettingsUpdate) {
+type GeneralSettingsDraft = Omit<SiteSettingsUpdate, "postsPerPage"> & {
+	postsPerPage?: number | null;
+};
+
+function generalSettingsSnapshot(settings: GeneralSettingsDraft) {
 	return JSON.stringify({
 		title: settings.title ?? "",
 		tagline: settings.tagline ?? "",
 		logo: settings.logo ?? null,
 		favicon: settings.favicon ?? null,
-		postsPerPage: settings.postsPerPage ?? 10,
+		postsPerPage: settings.postsPerPage === undefined ? 10 : settings.postsPerPage,
 		dateFormat: settings.dateFormat ?? "MMMM d, yyyy",
 		timezone: settings.timezone ?? "UTC",
 	});
@@ -140,7 +149,7 @@ function SiteStatusSection() {
 }
 
 export function GeneralSettings() {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const queryClient = useQueryClient();
 	const toastManager = useKumoToastManager();
 
@@ -171,7 +180,7 @@ export function GeneralSettings() {
 			: null;
 	const handoverHost = siteDomain?.siteOrigin !== window.location.origin ? siteHost : null;
 
-	const [formData, setFormData] = React.useState<SiteSettingsUpdate>({});
+	const [formData, setFormData] = React.useState<GeneralSettingsDraft>({});
 	const [savedFormData, setSavedFormData] = React.useState<SiteSettingsUpdate>({});
 	const [logoPickerOpen, setLogoPickerOpen] = React.useState(false);
 	const [faviconPickerOpen, setFaviconPickerOpen] = React.useState(false);
@@ -247,7 +256,7 @@ export function GeneralSettings() {
 	});
 
 	const pattern = formData.dateFormat ?? "MMMM d, yyyy";
-	const preview = datePreview(pattern, dateLocale);
+	const preview = datePreview(pattern, dateLocale, i18n.locale);
 	const timezone = formData.timezone ?? "UTC";
 	const recognizedTimezone = isValidTimezone(timezone);
 	const savedTimezoneUnchanged = timezone === savedFormData.timezone;
@@ -256,10 +265,10 @@ export function GeneralSettings() {
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		setShowTimezoneError(true);
-		if (!canSaveTimezone) return;
+		if (!canSaveTimezone || formData.postsPerPage === null) return;
 		// The Change domain dialog owns the Site URL.
-		const { url: _url, ...withoutUrl } = formData;
-		saveMutation.mutate(withoutUrl);
+		const { url: _url, postsPerPage, ...withoutUrl } = formData;
+		saveMutation.mutate({ ...withoutUrl, postsPerPage });
 	};
 
 	const handleChange = (key: keyof SiteSettings, value: unknown) => {
@@ -558,11 +567,12 @@ export function GeneralSettings() {
 
 				<SettingsSection title={t`Reading`}>
 					<SettingRow>
-						<Input
+						<LocalizedNumberInput
 							label={t`Posts Per Page`}
-							type="number"
-							value={formData.postsPerPage ?? 10}
-							onChange={(e) => handleChange("postsPerPage", parseInt(e.target.value, 10))}
+							value={formData.postsPerPage === undefined ? 10 : formData.postsPerPage}
+							onValueChange={(value) => handleChange("postsPerPage", value)}
+							step="1"
+							required
 							min={1}
 							max={100}
 							description={t`Number of posts to show per page on list views`}
@@ -600,12 +610,17 @@ export function GeneralSettings() {
 									: undefined
 							}
 						>
-							<Autocomplete.InputGroup placeholder={t`Search timezones…`} />
+							<div dir="ltr">
+								<Autocomplete.InputGroup
+									className="rtl:placeholder:text-end"
+									placeholder={t`Search timezones…`}
+								/>
+							</div>
 							<Autocomplete.Content>
 								<Autocomplete.List className="max-h-64 overflow-y-auto">
 									{(item: string) => (
 										<Autocomplete.Item key={item} value={item}>
-											{item}
+											<bdi dir="ltr">{item}</bdi>
 										</Autocomplete.Item>
 									)}
 								</Autocomplete.List>

@@ -1,7 +1,10 @@
 import type { Messages } from "@lingui/core";
 import { describe, expect, it } from "vitest";
 
-import { translateVisualEditingToolbarLabels } from "../src/locales/server.js";
+import {
+	resolveAdminBootLabel,
+	translateVisualEditingToolbarLabels,
+} from "../src/locales/server.js";
 
 describe("visual editing toolbar localization", () => {
 	it("resolves every toolbar label from the active Lingui catalog", () => {
@@ -74,5 +77,26 @@ describe("visual editing toolbar localization", () => {
 		});
 
 		expect(labels.uploadingFile).toBe("{filename} wird hochgeladen…");
+	});
+});
+
+describe("admin boot label", () => {
+	it("greets the visitor in the catalog's language before the admin boots", () => {
+		expect(
+			resolveAdminBootLabel(
+				{ "admin.bootLoading": ["در حال بارگذاری ", ["siteName"], "..."] },
+				"ام‌دش فارسی",
+			),
+		).toBe("در حال بارگذاری ام‌دش فارسی...");
+	});
+
+	it("substitutes the site name in a plain translated string", () => {
+		expect(
+			resolveAdminBootLabel({ "admin.bootLoading": "Cargando {siteName}..." }, "Mi sitio"),
+		).toBe("Cargando Mi sitio...");
+	});
+
+	it("falls back to English when the locale has no boot translation", () => {
+		expect(resolveAdminBootLabel({}, "EmDash")).toBe("Loading EmDash...");
 	});
 });

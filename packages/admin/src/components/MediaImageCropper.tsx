@@ -9,6 +9,7 @@ import ReactCrop, {
 } from "react-image-crop";
 
 import type { PixelCrop } from "../lib/crop-image.js";
+import { formatPixels } from "../lib/media-utils.js";
 import { useContainedMediaSize } from "./useContainedMediaSize.js";
 
 const HANDLE_TARGET_SIZE = 24;
@@ -65,7 +66,7 @@ export function MediaImageCropper({
 	onSourceError,
 	onImageReady,
 }: MediaImageCropperProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const imageRef = React.useRef<HTMLImageElement | null>(null);
 	const frameRef = React.useRef<HTMLDivElement>(null);
 	const [loadedSourceSize, setLoadedSourceSize] = React.useState<{
@@ -110,10 +111,12 @@ export function MediaImageCropper({
 			const pixels = naturalPixelCrop(image, displayCrop);
 			onCropComplete(pixels);
 			if (announce) {
-				setResizeAnnouncement(t`Crop area ${pixels.width} by ${pixels.height} pixels.`);
+				const width = formatPixels(pixels.width, i18n.locale);
+				const height = formatPixels(pixels.height, i18n.locale);
+				setResizeAnnouncement(t`Crop area ${width} by ${height} pixels.`);
 			}
 		},
-		[onCropComplete, t],
+		[onCropComplete, t, i18n],
 	);
 
 	React.useEffect(() => {

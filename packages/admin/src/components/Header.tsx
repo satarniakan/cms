@@ -7,7 +7,7 @@ import * as React from "react";
 import { apiFetch } from "../lib/api/client";
 import { useCurrentUser } from "../lib/api/current-user";
 import { AdminBreadcrumbs } from "./AdminBreadcrumbs.js";
-import { Sidebar } from "./Sidebar";
+import { Sidebar, useSidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserAvatar } from "./UserAvatar.js";
 
@@ -40,6 +40,7 @@ async function handleLogout() {
  */
 export function Header({ staging = false }: { staging?: boolean }) {
 	const { t } = useLingui();
+	const { open } = useSidebar();
 	const [userMenuOpen, setUserMenuOpen] = React.useState(false);
 
 	const { data: user } = useCurrentUser();
@@ -58,7 +59,10 @@ export function Header({ staging = false }: { staging?: boolean }) {
 		// (the settings sheet offsets its body by it) — change both together.
 		<header className="sticky top-0 z-10 flex h-[58px] items-center gap-3 border-b bg-kumo-elevated px-4 md:ps-6">
 			{/* The desktop trigger lives in the sidebar footer; mobile keeps it here so the closed sheet can reopen. */}
-			<Sidebar.Trigger className="shrink-0 cursor-pointer md:hidden rtl:rotate-180" />
+			<Sidebar.Trigger
+				className="shrink-0 cursor-pointer md:hidden rtl:rotate-180"
+				aria-label={open ? t`Collapse sidebar` : t`Expand sidebar`}
+			/>
 
 			<div className="flex min-w-0 flex-1 items-center">
 				<AdminBreadcrumbs />

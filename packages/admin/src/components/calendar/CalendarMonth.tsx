@@ -12,8 +12,11 @@ import { useLingui } from "@lingui/react/macro";
 import { Funnel } from "@phosphor-icons/react";
 import * as React from "react";
 import type { DayButtonProps } from "react-day-picker";
+import { faIR, getDateLib } from "react-day-picker/persian";
 
 import {
+	calendarMonth,
+	monthStartDay,
 	isMonthCutOff,
 	type CalendarDisplay,
 	type CalendarItem,
@@ -175,7 +178,7 @@ function CalendarMonthGrid({
 											day={day}
 											items={days.get(day) ?? []}
 											chips={chips}
-											inMonth={day.startsWith(month)}
+											inMonth={calendarMonth(day, display.locale) === month}
 											loaded={loadedThrough === undefined || day < loadedThrough}
 											today={today}
 											now={now}
@@ -233,7 +236,8 @@ function CalendarMonthCell({
 }: CalendarMonthCellProps) {
 	const { t } = useLingui();
 	const isToday = day === today;
-	const label = day.endsWith("-01") ? display.monthDayShort(day) : display.dayNumber(day);
+	const isFirstDay = day === monthStartDay(calendarMonth(day, display.locale), display.locale);
+	const label = isFirstDay ? display.monthDayShort(day) : display.dayNumber(day);
 	const visible = items.length > chips ? items.slice(0, chips - 1) : items;
 
 	return (
@@ -463,6 +467,8 @@ function CalendarMonthPicker({
 }: CalendarMonthProps) {
 	const { t, i18n } = useLingui();
 	const dateLocale = useDateLocale();
+	const isPersian = i18n.locale === "fa";
+	const persianDateLib = React.useMemo(() => getDateLib({ locale: faIR, numerals: "arabext" }), []);
 	const headingId = React.useId();
 	const [picked, setPicked] = React.useState<string>();
 	const [pickedMonth, setPickedMonth] = React.useState(month);
@@ -476,10 +482,14 @@ function CalendarMonthPicker({
 		[days],
 	);
 	const firstWithEntries = (map: ReadonlyMap<string, CalendarItem[]>) =>
-		[...map.keys()].filter((day) => day.startsWith(month)).toSorted()[0];
+		[...map.keys()].filter((day) => calendarMonth(day, display.locale) === month).toSorted()[0];
 	// The default day comes from every entry, so filtering doesn't move the selection.
 	const firstDay = firstWithEntries(unfilteredDays ?? days);
-	const selected = picked ?? (today.startsWith(month) ? today : (firstDay ?? `${month}-01`));
+	const selected =
+		picked ??
+		(calendarMonth(today, display.locale) === month
+			? today
+			: (firstDay ?? monthStartDay(month, display.locale)));
 	const filteredEmpty = Boolean(onClearFilters) && !loading && !firstWithEntries(days);
 	const items = days.get(selected) ?? [];
 
@@ -491,13 +501,17 @@ function CalendarMonthPicker({
 					required
 					selected={dayKeyToLocalDate(selected)}
 					onChange={(date) => setPicked(localDateToDayKey(date))}
-					month={dayKeyToLocalDate(`${month}-01`)}
-					onMonthChange={(date) => onMonthChange(localDateToDayKey(date).slice(0, 7))}
+					month={dayKeyToLocalDate(monthStartDay(month, display.locale))}
+					onMonthChange={(date) =>
+						onMonthChange(calendarMonth(localDateToDayKey(date), display.locale))
+					}
 					today={dayKeyToLocalDate(today)}
 					hideNavigation
 					showOutsideDays={false}
 					animate={false}
-					locale={dateLocale}
+					locale={isPersian ? faIR : dateLocale}
+					dateLib={isPersian ? persianDateLib : undefined}
+					numerals={isPersian ? "arabext" : undefined}
 					dir={getLocaleDir(i18n.locale)}
 					components={{ DayButton: CalendarDayButton }}
 					style={PICKER_STYLE}
@@ -526,7 +540,7 @@ function CalendarMonthPicker({
 				) : filteredEmpty && onClearFilters ? (
 					<div className="py-2">
 						<CalendarFilteredNotice
-							cutOff={isMonthCutOff(month, loadedThrough)}
+							cutOff={isMonthCutOff(month, loadedThrough, display.locale)}
 							onClearFilters={onClearFilters}
 						/>
 					</div>

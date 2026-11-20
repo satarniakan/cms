@@ -57,6 +57,7 @@ export function MediaBrowserItem({
 	className,
 	mediaDraggable,
 }: MediaBrowserItemProps) {
+	const { i18n } = useLingui();
 	const isImage = item.mimeType.startsWith("image/");
 	const hasVisualPreview = Boolean(item.url) && (isImage || Boolean(item.provider));
 	const needsDimensions = hasVisualPreview && (!item.width || !item.height);
@@ -111,7 +112,7 @@ export function MediaBrowserItem({
 						{item.filename}
 					</p>
 					<p className="truncate text-sm text-kumo-subtle">
-						{item.mimeType} · {formatFileSize(item.size)}
+						{item.mimeType} · {formatFileSize(item.size, i18n.locale)}
 					</p>
 				</div>
 				{selectable && selected ? (
@@ -281,7 +282,9 @@ export function MediaSelectionTrayItem({
 	onMoveLater: () => void;
 	onRemove: () => void;
 }) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
+	const positionLabel = i18n.number(position);
+	const totalLabel = i18n.number(total);
 	const image = item.mimeType.startsWith("image/") && item.url;
 	return (
 		<LayerCard
@@ -306,7 +309,7 @@ export function MediaSelectionTrayItem({
 				<p dir="auto" className="truncate text-sm font-medium" title={item.filename}>
 					{item.filename}
 				</p>
-				<p className="text-sm text-kumo-subtle">{t`${position} of ${total}`}</p>
+				<p className="text-sm text-kumo-subtle">{t`${positionLabel} of ${totalLabel}`}</p>
 			</div>
 			<div className="flex items-center gap-1">
 				<Button

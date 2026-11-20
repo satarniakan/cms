@@ -67,6 +67,7 @@ import { useDebouncedValue, useStableCallback } from "../lib/hooks";
 import {
 	getFileIcon,
 	formatFileSize,
+	formatPixels,
 	getMediaPreviewUrl,
 	getMediaThumbnailUrl,
 	metaPlayback,
@@ -1328,7 +1329,7 @@ export function MediaDetailPanel({
 									</span>
 									<p className="flex min-w-0 flex-nowrap items-baseline gap-1 whitespace-nowrap leading-5">
 										<span className="text-kumo-subtle">{t`Size:`}</span>
-										<span className="tabular-nums">{formatFileSize(item.size)}</span>
+										<span className="tabular-nums">{formatFileSize(item.size, i18n.locale)}</span>
 									</p>
 								</div>
 								{item.width && item.height && (
@@ -1341,8 +1342,9 @@ export function MediaDetailPanel({
 										</span>
 										<p className="flex min-w-0 flex-nowrap items-baseline gap-1 whitespace-nowrap leading-5">
 											<span className="text-kumo-subtle">{t`Dimensions:`}</span>
-											<span className="tabular-nums">
-												{item.width} × {item.height}
+											<span dir="ltr" className="tabular-nums">
+												{formatPixels(item.width, i18n.locale)} ×{" "}
+												{formatPixels(item.height, i18n.locale)}
 											</span>
 										</p>
 									</div>
@@ -1388,13 +1390,15 @@ export function MediaDetailPanel({
 									/>
 									<span className="shrink-0 text-kumo-subtle">{t`URL:`}</span>
 									{publicFileUrl ? (
-										<ClipboardText
-											text={publicFilePath}
-											textToCopy={publicFileUrl}
-											size="sm"
-											className="w-full min-w-0 max-w-none flex-1"
-											labels={{ copyAction: t`Copy URL` }}
-										/>
+										<span dir="ltr" className="flex min-w-0 flex-1">
+											<ClipboardText
+												text={publicFilePath}
+												textToCopy={publicFileUrl}
+												size="sm"
+												className="min-w-0 max-w-none flex-1"
+												labels={{ copyAction: t`Copy URL` }}
+											/>
+										</span>
 									) : (
 										<span className="min-w-0 text-kumo-subtle">{t`No public URL available`}</span>
 									)}
@@ -1726,9 +1730,14 @@ export function MediaDetailPanel({
 														aria-label={t`Crop output dimensions`}
 														className="shrink-0 font-medium tabular-nums text-kumo-default"
 													>
-														{cropPixels
-															? `${cropPixels.width} × ${cropPixels.height}`
-															: t`Loading...`}
+														{cropPixels ? (
+															<span dir="ltr" className="tabular-nums">
+																{formatPixels(cropPixels.width, i18n.locale)} ×{" "}
+																{formatPixels(cropPixels.height, i18n.locale)}
+															</span>
+														) : (
+															t`Loading...`
+														)}
 													</output>
 												</div>
 												{canReplaceOriginal && cropAspectMode !== "original" ? (

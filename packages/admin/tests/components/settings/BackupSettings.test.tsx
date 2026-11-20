@@ -1,4 +1,5 @@
 import { Toasty } from "@cloudflare/kumo";
+import { i18n } from "@lingui/core";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -69,6 +70,46 @@ beforeEach(() => {
 });
 
 describe("BackupSettings", () => {
+	it("saves a Persian retention count without enabling automatic backups or creating archives", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			mockFetchBackupOverview.mockResolvedValue({
+				...defaultOverview,
+				settings: { enabled: false, retention: 7 },
+			});
+			const screen = await renderBackupSettings();
+			const input = screen.getByLabelText("Backups to keep");
+			await expect.element(input).toHaveValue("۷");
+			for (const text of ["۱۲", "١٢", "12"]) {
+				await input.fill(text);
+				await expect.element(input).toHaveValue("۱۲");
+			}
+			await screen.getByRole("button", { name: "Save", exact: true }).click();
+			await vi.waitFor(() =>
+				expect(mockUpdateBackupSettings).toHaveBeenCalledExactlyOnceWith({
+					enabled: false,
+					retention: 12,
+				}),
+			);
+			await expect.element(input).toHaveValue("۱۲");
+			expect(mockCreateBackupArchive).not.toHaveBeenCalled();
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
+	});
+
+	it("blocks empty and fractional retention counts rather than replacing the entered value", async () => {
+		const screen = await renderBackupSettings();
+		const input = screen.getByLabelText("Backups to keep");
+		for (const text of ["", "2.5", "0", "31"]) {
+			await input.fill(text);
+			await screen.getByRole("button", { name: "Save", exact: true }).click();
+			expect((input.element() as HTMLInputElement).checkValidity()).toBe(false);
+			expect(mockUpdateBackupSettings).not.toHaveBeenCalled();
+		}
+	});
+
 	it("shows the shared frame while backup settings load", async () => {
 		mockFetchBackupOverview.mockReturnValue(new Promise(() => undefined));
 		const screen = await renderBackupSettings();
@@ -104,6 +145,10 @@ describe("BackupSettings", () => {
 		expect(saveButtons).toHaveLength(1);
 		for (const button of saveButtons) await expect.element(button).toBeEnabled();
 
+		await userEvent.click(saveButtons[0]);
+		expect(mockUpdateBackupSettings).not.toHaveBeenCalled();
+		await expect.element(screen.getByLabelText("Backups to keep")).toHaveValue(45);
+		await screen.getByLabelText("Backups to keep").fill("30");
 		await userEvent.click(saveButtons[0]);
 		await vi.waitFor(() => {
 			expect(mockUpdateBackupSettings).toHaveBeenCalledWith({ enabled: true, retention: 30 });
@@ -142,6 +187,22 @@ describe("BackupSettings", () => {
 		await expect
 			.element(screen.getByText("Backup created: backup-2026-08-04.zip"))
 			.toBeInTheDocument();
+	});
+
+	it("localizes archive sizes and dates without changing filenames or download URLs", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			mockFetchBackupOverview.mockResolvedValue({ ...defaultOverview, archives: [archive] });
+			const screen = await renderBackupSettings();
+			await expect.element(screen.getByText(/۲٫۰ کیلوبایت/)).toHaveTextContent("۱۴۰۵");
+			await expect.element(screen.getByText(archive.name)).toBeInTheDocument();
+			await expect
+				.element(screen.getByRole("link", { name: `Download ${archive.name}` }))
+				.toHaveAttribute("href", `/_emdash/api/settings/backups/archives/${archive.name}`);
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
 	});
 
 	it("shows the stored-backup empty state and renders archive actions", async () => {

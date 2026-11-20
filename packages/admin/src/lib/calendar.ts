@@ -1,10 +1,5 @@
-/**
- * Calendar placement and formatting.
- *
- * Day keys (`YYYY-MM-DD`) and month keys (`YYYY-MM`) name calendar days in
- * the site's time zone. Grid arithmetic runs on UTC dates, so the browser's
- * own offset never shifts a day.
- */
+// Day keys stay Gregorian; month keys follow the display calendar. Grid arithmetic uses UTC.
+import { getDateLib } from "react-day-picker/persian";
 
 import type { CalendarEntry } from "./api/calendar.js";
 import { calendarEntryKey } from "./api/calendar.js";
@@ -73,22 +68,40 @@ export function dayKeyToUTC(day: string): number {
 	return Date.UTC(year, month - 1, date);
 }
 
-export function isMonthKey(value: unknown): value is string {
+export function isMonthKey(value: unknown, locale = "en"): value is string {
 	if (typeof value !== "string") return false;
 	const match = MONTH_PATTERN.exec(value);
 	if (!match) return false;
 	const year = Number(match[1]);
 	const month = Number(match[2]);
-	return year >= MIN_YEAR && year <= MAX_YEAR && month >= 1 && month <= 12;
+	if (year < MIN_YEAR || year > MAX_YEAR || month < 1 || month > 12) return false;
+	if (locale !== "fa") return true;
+	const first = dayKeyToUTC(monthStartDay(value, locale));
+	const end = dayKeyToUTC(monthStartDay(shiftMonth(value, 1), locale));
+	return first >= Date.UTC(MIN_YEAR, 0, 1) && end - 1 <= MAX_TIME;
 }
 
-/**
- * Whether a range cut off at the entry cap stopped before the month's end.
- * `loadedThrough` is the day of the last loaded entry, which may itself be
- * only partly loaded.
- */
-export function isMonthCutOff(month: string, loadedThrough: string | undefined): boolean {
-	return loadedThrough !== undefined && loadedThrough.slice(0, 7) <= month;
+const persianDateLib = getDateLib();
+
+export function calendarMonth(day: string, locale = "en"): string {
+	if (locale !== "fa") return day.slice(0, 7);
+	const [year = 1970, month = 1, date = 1] = day.split("-").map(Number);
+	return persianDateLib.format(new Date(year, month - 1, date, 12), "yyyy-MM");
+}
+
+export function monthStartDay(month: string, locale = "en"): string {
+	if (locale !== "fa") return `${month}-01`;
+	const [year = 1400, index = 1] = month.split("-").map(Number);
+	const date = persianDateLib.newDate(year, index - 1, 1);
+	return utcDayKey(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+}
+
+export function isMonthCutOff(
+	month: string,
+	loadedThrough: string | undefined,
+	locale = "en",
+): boolean {
+	return loadedThrough !== undefined && loadedThrough < monthStartDay(shiftMonth(month, 1), locale);
 }
 
 export function shiftDay(day: string, delta: number): string {
@@ -101,11 +114,10 @@ export function shiftMonth(month: string, delta: number): string {
 }
 
 /** Every day from the week containing the 1st to the week containing the last day. */
-export function monthGridDays(month: string, weekStartsOn: number): string[] {
-	const [year = 1970, index = 1] = month.split("-").map(Number);
-	const first = Date.UTC(year, index - 1, 1);
+export function monthGridDays(month: string, weekStartsOn: number, locale = "en"): string[] {
+	const first = dayKeyToUTC(monthStartDay(month, locale));
 	const offset = (new Date(first).getUTCDay() - weekStartsOn + 7) % 7;
-	const length = new Date(Date.UTC(year, index, 0)).getUTCDate();
+	const length = (dayKeyToUTC(monthStartDay(shiftMonth(month, 1), locale)) - first) / DAY_MS;
 	const weeks = Math.ceil((offset + length) / 7);
 	return Array.from({ length: weeks * 7 }, (_, day) => utcDayKey(first + (day - offset) * DAY_MS));
 }
@@ -361,12 +373,12 @@ function weekendDays(locale: string): ReadonlySet<number> {
 	return new Set(weekend?.length ? weekend.map((day) => day % 7) : [6, 0]);
 }
 
-/** Formatters for day keys: pinned to UTC and the Gregorian calendar the grid uses. */
+// UTC keeps canonical day keys on the same date in every browser time zone.
 function dayFormatter(locale: string, options: Intl.DateTimeFormatOptions) {
 	const formatter = new Intl.DateTimeFormat(locale, {
 		...options,
 		timeZone: "UTC",
-		calendar: "gregory",
+		calendar: locale === "fa" ? "persian" : "gregory",
 	});
 	return (day: string) => formatter.format(dayKeyToUTC(day));
 }
@@ -387,7 +399,7 @@ export function createCalendarDisplay(options: CalendarDisplayOptions): Calendar
 	const time = new Intl.DateTimeFormat(locale, { timeZone, hour: "numeric", minute: "2-digit" });
 	const dateTime = new Intl.DateTimeFormat(locale, {
 		timeZone,
-		calendar: "gregory",
+		calendar: locale === "fa" ? "persian" : "gregory",
 		weekday: "short",
 		month: "short",
 		day: "numeric",
@@ -412,7 +424,7 @@ export function createCalendarDisplay(options: CalendarDisplayOptions): Calendar
 		month: "long",
 		year: "numeric",
 		timeZone: "UTC",
-		calendar: "gregory",
+		calendar: locale === "fa" ? "persian" : "gregory",
 	});
 
 	const collections = new Map<string, CalendarCollection>(
@@ -442,7 +454,12 @@ export function createCalendarDisplay(options: CalendarDisplayOptions): Calendar
 				? viewerTime.format(value)
 				: viewerDayTime.format(value),
 		formatDateTime: (value) => dateTime.format(value),
-		monthTitle: (month) => monthTitle.format(dayKeyToUTC(`${month}-01`)),
+		monthTitle: (month) => {
+			const date = dayKeyToUTC(monthStartDay(month, locale));
+			if (locale !== "fa") return monthTitle.format(date);
+			const parts = monthTitle.formatToParts(date);
+			return `${parts.find((part) => part.type === "month")?.value} ${parts.find((part) => part.type === "year")?.value}`;
+		},
 		weekday: dayFormatter(locale, { weekday: "long" }),
 		weekdayShort: dayFormatter(locale, { weekday: "short" }),
 		monthDay: dayFormatter(locale, { month: "long", day: "numeric" }),

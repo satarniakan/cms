@@ -19,6 +19,22 @@ export interface Page {
   terms?: Record<string, TaxonomyTerm[]>;
 }
 
+export interface PersianDatetimeCheck {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  event_at: string;
+  optional_at?: string;
+  sessions?: { "starts_at"?: string | null }[];
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
 export interface Post {
   id: string;
   slug: string | null;
@@ -38,6 +54,7 @@ export interface Post {
 declare module "emdash" {
   interface EmDashCollections {
     pages: Page;
+    persian_datetime_checks: PersianDatetimeCheck;
     posts: Post;
   }
 }

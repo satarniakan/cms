@@ -91,7 +91,7 @@ function UploadFileRow({
 	onRetry: () => void;
 	onRemove: () => void;
 }) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const isBusy = row.status === "queued" || row.status === "uploading";
 
 	return (
@@ -109,7 +109,7 @@ function UploadFileRow({
 				)}
 			</div>
 			<div className="min-w-0">
-				<p className="line-clamp-2 text-sm font-medium leading-5" title={row.file.name}>
+				<p dir="auto" className="line-clamp-2 text-sm font-medium leading-5" title={row.file.name}>
 					{row.file.name}
 				</p>
 				<div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-kumo-subtle">
@@ -117,7 +117,7 @@ function UploadFileRow({
 						<UploadStatusLabel status={row.status} />
 					</span>
 					<span aria-hidden="true">·</span>
-					<span className="tabular-nums">{formatFileSize(row.file.size)}</span>
+					<span className="tabular-nums">{formatFileSize(row.file.size, i18n.locale)}</span>
 				</div>
 				{row.status === "failed" && row.error && (
 					<p className="mt-0.5 text-sm wrap-break-word text-kumo-danger">{row.error}</p>
@@ -165,7 +165,7 @@ export function MediaUploadDialog({
 	upload,
 	concurrency,
 }: MediaUploadDialogProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const lastRequestIdRef = React.useRef<number | null>(null);
 	const inputRef = React.useRef<HTMLInputElement>(null);
 	const {
@@ -195,8 +195,10 @@ export function MediaUploadDialog({
 		onEnqueueRequestConsumed(enqueueRequest.id);
 	}, [addFiles, enqueueRequest, onEnqueueRequestConsumed, open]);
 
+	const completedLabel = i18n.number(completedCount);
+	const totalLabel = i18n.number(rows.length);
 	const liveMessage = hasUnfinished
-		? t`${completedCount} of ${rows.length} uploads complete`
+		? t`${completedLabel} of ${totalLabel} uploads complete`
 		: failedCount > 0
 			? plural(failedCount, { one: "# upload failed", other: "# uploads failed" })
 			: rows.length > 0
@@ -311,7 +313,7 @@ export function MediaUploadDialog({
 
 				<div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-kumo-line px-6 py-4">
 					<p className="text-sm text-kumo-subtle tabular-nums" aria-hidden="true">
-						{rows.length > 0 ? t`${completedCount} of ${rows.length} complete` : t`No files added`}
+						{rows.length > 0 ? t`${completedLabel} of ${totalLabel} complete` : t`No files added`}
 					</p>
 					<div className="flex flex-wrap items-center justify-end gap-2">
 						{completedCount > 0 && (

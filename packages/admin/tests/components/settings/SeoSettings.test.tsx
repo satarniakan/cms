@@ -1,4 +1,5 @@
 import { Toasty } from "@cloudflare/kumo";
+import { i18n } from "@lingui/core";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -103,6 +104,40 @@ beforeEach(() => {
 });
 
 describe("SeoSettings", () => {
+	it.each(["fa", "ar"])("preserves verification codes and crawler rules in %s", async (locale) => {
+		const previousLocale = i18n.locale;
+		const previousDirection = document.documentElement.dir;
+		try {
+			i18n.loadAndActivate({ locale, messages: {} });
+			document.documentElement.dir = "rtl";
+			const screen = await renderSeoSettings();
+			const google = screen.getByRole("textbox", { name: "Google Verification", exact: true });
+			const robots = screen.getByRole("textbox", { name: "robots.txt", exact: true });
+			const code = "google-verification_123-AbC";
+			const rules = "User-agent: *\nDisallow: /private/123/";
+			await google.fill(code);
+			await robots.fill(rules);
+			await expect.element(google).toHaveValue(code);
+			await expect.element(robots).toHaveValue(rules);
+			await expect
+				.element(screen.getByRole("switch", { name: "Disallow AI training" }))
+				.not.toBeChecked();
+			await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+			await vi.waitFor(() =>
+				expect(mockUpdateSettings).toHaveBeenCalledWith({
+					...defaultSettings,
+					seo: { ...defaultSettings.seo, googleVerification: code, robotsTxt: rules },
+				}),
+			);
+			await expect
+				.element(screen.getByRole("button", { name: "Saved", exact: true }).first())
+				.toBeDisabled();
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+			document.documentElement.dir = previousDirection;
+		}
+	});
+
 	it("shows the shared frame while settings load", async () => {
 		mockFetchSettings.mockReturnValue(new Promise(() => undefined));
 		const screen = await renderSeoSettings();

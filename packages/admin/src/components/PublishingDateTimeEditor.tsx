@@ -4,8 +4,10 @@ import { msg } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { Globe, PencilSimple } from "@phosphor-icons/react";
 import * as React from "react";
+import { faIR, getDateLib } from "react-day-picker/persian";
 
 import { guardUnsavedInput } from "../lib/dialog-form.js";
+import { localizeNumberInput } from "../lib/localized-number.js";
 import {
 	getPublishingTimeZone,
 	nextPublishingScheduleSlot,
@@ -26,6 +28,7 @@ interface PublishingDateTimeFieldsProps {
 	time: string;
 	disabled?: boolean;
 	restrictToFuture?: boolean;
+	timezone?: string;
 	dateAriaLabel: string;
 	/** A new object on every failed save, so focus returns to the field even when the reason repeats. */
 	invalid?: { reason: PublishingDateTimeError } | null;
@@ -40,6 +43,7 @@ const VALIDATION_MESSAGES: Record<PublishingDateTimeError, MessageDescriptor> = 
 	"invalid-time": msg`Enter a valid time`,
 	past: msg`Choose a time in the future`,
 	"nonexistent-time": msg`That time does not exist in your time zone`,
+	"invalid-site-time": msg`That time is ambiguous or does not exist in the site timezone`,
 };
 
 function getLocalToday(): Date {
@@ -110,6 +114,7 @@ export function PublishingDateTimeFields({
 	time,
 	disabled,
 	restrictToFuture,
+	timezone,
 	dateAriaLabel,
 	invalid,
 	onDateChange,
@@ -117,6 +122,8 @@ export function PublishingDateTimeFields({
 }: PublishingDateTimeFieldsProps) {
 	const { i18n, t } = useLingui();
 	const dateLocale = useDateLocale();
+	const isPersian = i18n.locale === "fa";
+	const persianDateLib = React.useMemo(() => getDateLib({ locale: faIR, numerals: "arabext" }), []);
 	const today = getLocalToday();
 	const [month, setMonth] = React.useState(date ?? today);
 	React.useEffect(() => {
@@ -126,7 +133,7 @@ export function PublishingDateTimeFields({
 	const zoneDate = resolved.success ? resolved.date : (date ?? new Date());
 	const { timeZone, shortName } = getPublishingTimeZone(zoneDate, i18n.locale);
 	const zoneDetails = timeZone ? (shortName ? `${timeZone} (${shortName})` : timeZone) : null;
-	const zoneValue = zoneDetails ?? t`Local time`;
+	const zoneValue = timezone ?? zoneDetails ?? t`Local time`;
 	const use12HourClock = React.useMemo(() => uses12HourClock(i18n.locale), [i18n.locale]);
 	const periodItems = React.useMemo(
 		() => [
@@ -204,7 +211,9 @@ export function PublishingDateTimeFields({
 				onMonthChange={setMonth}
 				onChange={onDateChange}
 				disabled={disabled ? true : restrictToFuture ? { before: today } : undefined}
-				locale={dateLocale}
+				locale={isPersian ? faIR : dateLocale}
+				dateLib={isPersian ? persianDateLib : undefined}
+				numerals={isPersian ? "arabext" : undefined}
 				dir={getLocaleDir(i18n.locale)}
 				aria-label={dateAriaLabel}
 				className="w-full [--cell-width:calc(100%/7)] [&_.rdp-month]:w-full [&_table]:w-full"
@@ -224,15 +233,15 @@ export function PublishingDateTimeFields({
 				>
 					<Input
 						aria-label={t`Hour`}
-						variant={hourInvalid ? "error" : "default"}
+						error={hourInvalid ? { message: null, match: true } : undefined}
 						aria-invalid={hourInvalid || undefined}
 						aria-describedby={hourInvalid ? errorId : undefined}
 						placeholder="--"
-						value={timeParts.hour}
+						value={localizeNumberInput(timeParts.hour, i18n.locale)}
 						type="text"
 						inputMode="numeric"
 						maxLength={2}
-						pattern="[0-9]*"
+						pattern="[0-9۰-۹٠-٩]*"
 						autoComplete="off"
 						onChange={(event) => updateHour(event.target.value)}
 						onFocus={(event) => event.currentTarget.select()}
@@ -250,15 +259,15 @@ export function PublishingDateTimeFields({
 					<Input
 						ref={minuteInputRef}
 						aria-label={t`Minute`}
-						variant={minuteInvalid ? "error" : "default"}
+						error={minuteInvalid ? { message: null, match: true } : undefined}
 						aria-invalid={minuteInvalid || undefined}
 						aria-describedby={minuteInvalid ? errorId : undefined}
 						placeholder="--"
-						value={timeParts.minute}
+						value={localizeNumberInput(timeParts.minute, i18n.locale)}
 						type="text"
 						inputMode="numeric"
 						maxLength={2}
-						pattern="[0-9]*"
+						pattern="[0-9۰-۹٠-٩]*"
 						autoComplete="off"
 						onChange={(event) => updateMinute(event.target.value)}
 						onFocus={(event) => event.currentTarget.select()}

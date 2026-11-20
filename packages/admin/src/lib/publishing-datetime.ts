@@ -11,6 +11,7 @@ export type PublishingDateTimeError =
 	| "invalid-date"
 	| "invalid-time"
 	| "nonexistent-time"
+	| "invalid-site-time"
 	| "past";
 
 export type PublishingDateTimeResult =

@@ -52,20 +52,23 @@ const filteredPosts = posts.map((post) => ({
 ---
 
 <Base
-	title={`Posts tagged "${term.label}"`}
-	description={`All posts tagged with ${term.label}`}
+	title={`نوشته‌های برچسب «${term.label}»`}
+	description={`همهٔ نوشته‌ها با برچسب ${term.label}`}
 >
 	<header class="band intro">
 		<div class="frame archive-intro">
 			<div class="archive-intro__text">
-				<p class="eyebrow">Tag</p>
+				<p class="eyebrow">برچسب</p>
 				<h1 class="intro__title">{term.label}</h1>
 				<p class="intro__lead">
-					{term.description || `Posts tagged ${term.label}, newest first.`}
+					{
+						term.description ||
+							`نوشته‌ها با برچسب ${term.label}، از تازه‌ترین به قدیمی‌ترین.`
+					}
 				</p>
 			</div>
 			<a href="/posts" class="arrow-link">
-				All posts
+				همهٔ نوشته‌ها
 				<svg
 					viewBox="0 0 24 24"
 					fill="none"
@@ -104,19 +107,19 @@ const filteredPosts = posts.map((post) => ({
 				) : (
 					<div class="empty-state">
 						<h2 class="empty-state__title">
-							{cursor ? "No more posts" : "Nothing here yet"}
+							{cursor ? "به پایان نوشته‌ها رسیدید" : "هنوز نوشته‌ای وجود ندارد"}
 						</h2>
 						<p class="empty-state__text">
 							{cursor
-								? "This page is past the last post."
-								: `No posts have been tagged ${term.label} so far.`}
+								? "نوشتهٔ دیگری در این صفحه وجود ندارد."
+								: `هنوز نوشته‌ای با برچسب ${term.label} منتشر نشده است.`}
 						</p>
 						<div class="empty-state__actions">
 							<a
 								href={cursor ? `/tag/${term.slug}` : "/posts"}
 								class="btn btn--ghost"
 							>
-								{cursor ? "Back to the first page" : "Browse all posts"}
+								{cursor ? "بازگشت به صفحهٔ اول" : "مشاهدهٔ همهٔ نوشته‌ها"}
 							</a>
 						</div>
 					</div>

@@ -20,10 +20,11 @@ import { useLingui } from "@lingui/react/macro";
 import { Plus, Trash, DotsSixVertical, CaretDown } from "@phosphor-icons/react";
 import * as React from "react";
 
-import { fromDatetimeLocalInputValue, toDatetimeLocalInputValue } from "../lib/datetime-local.js";
 import { cn } from "../lib/utils.js";
 import { CaretNext } from "./ArrowIcons.js";
 import { ImageFieldRenderer, type ImageFieldValue } from "./ImageFieldRenderer.js";
+import { LocalizedDateTimeInput } from "./LocalizedDateTimeInput.js";
+import { LocalizedNumberInput } from "./LocalizedNumberInput.js";
 
 interface RepeaterSubFieldDef {
 	slug: string;
@@ -348,12 +349,11 @@ function SubFieldInput({ id, subField, value, onChange, timezone }: SubFieldInpu
 		case "number":
 		case "integer":
 			return (
-				<Input
+				<LocalizedNumberInput
 					id={id}
 					label={subField.label}
-					type="number"
-					value={typeof value === "number" ? String(value) : ""}
-					onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+					value={typeof value === "number" ? value : null}
+					onValueChange={onChange}
 					required={subField.required}
 					step={subField.type === "integer" ? "1" : "any"}
 				/>
@@ -369,18 +369,12 @@ function SubFieldInput({ id, subField, value, onChange, timezone }: SubFieldInpu
 			);
 		case "datetime":
 			return (
-				<Input
+				<LocalizedDateTimeInput
 					id={id}
 					label={subField.label}
-					type="datetime-local"
-					value={toDatetimeLocalInputValue(value, timezone)}
-					onChange={(e) => {
-						try {
-							onChange(fromDatetimeLocalInputValue(e.target.value, timezone));
-						} catch {
-							onChange(e.target.value);
-						}
-					}}
+					value={value}
+					timezone={timezone}
+					onValueChange={onChange}
 					required={subField.required}
 				/>
 			);

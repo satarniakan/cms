@@ -92,7 +92,7 @@ export function FocalPointEditor({
 	onReadyChange,
 	editorFrameRef,
 }: FocalPointEditorProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const activePointerRef = React.useRef<number | null>(null);
 	const frameRef = React.useRef<HTMLDivElement>(null);
 	const [loadedSource, setLoadedSource] = React.useState<{
@@ -113,10 +113,11 @@ export function FocalPointEditor({
 		[editorFrameRef],
 	);
 
-	const announce = (next: MediaFocalPoint) =>
-		setAnnouncement(
-			t`Horizontal ${Math.round(next.focalX * 100)}%, vertical ${Math.round(next.focalY * 100)}%`,
-		);
+	const announce = (next: MediaFocalPoint) => {
+		const xLabel = i18n.number(Math.round(next.focalX * 100));
+		const yLabel = i18n.number(Math.round(next.focalY * 100));
+		setAnnouncement(t`Horizontal ${xLabel}%, vertical ${yLabel}%`);
+	};
 	const releasePointer = (event: React.PointerEvent<HTMLButtonElement>) => {
 		if (activePointerRef.current !== event.pointerId) return;
 		activePointerRef.current = null;

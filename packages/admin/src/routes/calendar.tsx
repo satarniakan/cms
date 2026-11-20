@@ -22,6 +22,8 @@ import { CALENDAR_MAX_ENTRIES, calendarQueryOptions } from "../lib/api/calendar.
 import { ApiResponseError, fetchManifest, type AdminManifest } from "../lib/api/client.js";
 import { useCurrentUser } from "../lib/api/current-user.js";
 import {
+	calendarMonth,
+	monthStartDay,
 	createCalendarDisplay,
 	dayKeyInZone,
 	dayKeyToUTC,
@@ -155,11 +157,16 @@ function Calendar({ manifest }: { manifest: AdminManifest }) {
 	);
 
 	const today = dayKeyInZone(now, display.timeZone);
-	const month = search.month ?? today.slice(0, 7);
+	const month = isMonthKey(search.month, i18n.locale)
+		? search.month
+		: calendarMonth(today, i18n.locale);
 	const view: CalendarView = search.view ?? (compact ? "agenda" : "month");
 	const dateLocale = useDateLocale();
-	const weekStartsOn = dateLocale.options?.weekStartsOn ?? 0;
-	const gridDays = React.useMemo(() => monthGridDays(month, weekStartsOn), [month, weekStartsOn]);
+	const weekStartsOn = i18n.locale === "fa" ? 6 : (dateLocale.options?.weekStartsOn ?? 0);
+	const gridDays = React.useMemo(
+		() => monthGridDays(month, weekStartsOn, i18n.locale),
+		[month, weekStartsOn, i18n.locale],
+	);
 	const range = React.useMemo(() => fetchRange(gridDays), [gridDays]);
 
 	// Values that match no current option (a deleted collection in a shared link) are ignored.
@@ -245,7 +252,7 @@ function Calendar({ manifest }: { manifest: AdminManifest }) {
 		});
 	}, [entryMissing, navigate]);
 	const goToMonth = (next: string | undefined) => {
-		if (next === undefined || isMonthKey(next)) updateSearch({ month: next });
+		if (next === undefined || isMonthKey(next, i18n.locale)) updateSearch({ month: next });
 	};
 	const changeView = (next: CalendarView) => updateSearch({ view: next });
 	const setFilters = (patch: Partial<CalendarFilterValues>) => {
@@ -262,8 +269,8 @@ function Calendar({ manifest }: { manifest: AdminManifest }) {
 		filterTriggerRef.current?.focus();
 	};
 	const prefetchMonth = (target: string) => {
-		if (!isMonthKey(target)) return;
-		const targetRange = fetchRange(monthGridDays(target, weekStartsOn));
+		if (!isMonthKey(target, i18n.locale)) return;
+		const targetRange = fetchRange(monthGridDays(target, weekStartsOn, i18n.locale));
 		void queryClient.prefetchQuery({
 			...calendarQueryOptions(targetRange.from, targetRange.to),
 			staleTime: REFRESH_MS,
@@ -287,7 +294,7 @@ function Calendar({ manifest }: { manifest: AdminManifest }) {
 				<CalendarToolbar
 					title={display.monthTitle(month)}
 					display={display}
-					zoneTime={dayKeyToUTC(`${month}-15`) + 12 * 3_600_000}
+					zoneTime={dayKeyToUTC(monthStartDay(month, i18n.locale)) + 14.5 * 86_400_000}
 					loading={calendar.isPending && calendar.isFetching}
 					view={view}
 					onViewChange={changeView}
@@ -393,7 +400,10 @@ function Calendar({ manifest }: { manifest: AdminManifest }) {
 					returnFocus={returnFocusRef}
 					onClose={closeEntry}
 					onRescheduled={(_item, scheduledAt) => {
-						const target = dayKeyInZone(Date.parse(scheduledAt), display.timeZone).slice(0, 7);
+						const target = calendarMonth(
+							dayKeyInZone(Date.parse(scheduledAt), display.timeZone),
+							i18n.locale,
+						);
 						if (target !== month) goToMonth(target);
 					}}
 				/>

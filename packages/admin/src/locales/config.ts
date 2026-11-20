@@ -29,6 +29,10 @@ declare const __EMDASH_PSEUDO_LOCALE__: boolean;
 // option is unset. Undefined when the admin package is loaded outside that
 // Vite build, such as in tests.
 declare const __EMDASH_ADMIN_LOCALES__: string[] | null;
+declare const __EMDASH_ADMIN_LOCALE__: string | null;
+
+const FIXED_LOCALE =
+	typeof __EMDASH_ADMIN_LOCALE__ !== "undefined" ? __EMDASH_ADMIN_LOCALE__ : null;
 
 /**
  * The pseudo locale, injected into the supported list only when
@@ -45,6 +49,7 @@ const ADMIN_LOCALE_ALLOWLIST =
 		: undefined;
 
 function isAllowedLocale(code: string): boolean {
+	if (FIXED_LOCALE) return code === FIXED_LOCALE;
 	return ADMIN_LOCALE_ALLOWLIST === undefined || ADMIN_LOCALE_ALLOWLIST.has(code);
 }
 
@@ -56,7 +61,7 @@ export const SUPPORTED_LOCALES = [
 
 export const SUPPORTED_LOCALE_CODES = new Set(SUPPORTED_LOCALES.map((l) => l.code));
 
-export const DEFAULT_LOCALE = SOURCE_LOCALE.code;
+export const DEFAULT_LOCALE = FIXED_LOCALE ?? SOURCE_LOCALE.code;
 
 /** Maps base language codes to supported locales (e.g. "pt" -> "pt-BR"). */
 const BASE_LANGUAGE_MAP = new Map<string, string>();
@@ -141,6 +146,7 @@ const LOCALE_COOKIE_RE = /(?:^|;\s*)emdash-locale=([^;]+)/;
  * Priority: emdash-locale cookie -> Accept-Language -> DEFAULT_LOCALE.
  */
 export function resolveLocale(request: Request): string {
+	if (FIXED_LOCALE) return FIXED_LOCALE;
 	const cookieHeader = request.headers.get("cookie") ?? "";
 	const cookieMatch = cookieHeader.match(LOCALE_COOKIE_RE);
 	const cookieLocale = cookieMatch?.[1]?.trim() ?? "";

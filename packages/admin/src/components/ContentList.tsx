@@ -32,6 +32,7 @@ import {
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import * as React from "react";
+import { faIR, getDateLib } from "react-day-picker/persian";
 
 import type {
 	AdminManifest,
@@ -1148,6 +1149,8 @@ function DateRangeFilter({
 			: t`Date range`;
 	const selected: DateRange | undefined = from ? { from, to } : to ? { from: to, to } : undefined;
 	const dayPickerLocale = useDateLocale();
+	const isPersian = i18n.locale === "fa";
+	const persianDateLib = React.useMemo(() => getDateLib({ locale: faIR, numerals: "arabext" }), []);
 	const direction = getLocaleDir(i18n.locale);
 	const isUpperBoundOnly = !from && !!to;
 	const canUseAsEndDate = !!from && (!to || value.from === value.to);
@@ -1207,7 +1210,9 @@ function DateRangeFilter({
 					onChange={handleChange}
 					aria-label={t`Choose a date range`}
 					className="mt-1"
-					locale={dayPickerLocale}
+					locale={isPersian ? faIR : dayPickerLocale}
+					dateLib={isPersian ? persianDateLib : undefined}
+					numerals={isPersian ? "arabext" : undefined}
 					dir={direction}
 				/>
 				<div className="mt-1 flex flex-wrap items-center justify-end gap-2 border-t border-kumo-line pt-2">

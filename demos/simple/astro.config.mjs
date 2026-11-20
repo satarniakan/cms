@@ -8,6 +8,11 @@ import { sqlite } from "emdash/db";
 
 export default defineConfig({
 	output: "server",
+	i18n: {
+		defaultLocale: "fa",
+		locales: ["fa"],
+		routing: { prefixDefaultLocale: false },
+	},
 	adapter: node({
 		mode: "standalone",
 	}),
@@ -19,6 +24,13 @@ export default defineConfig({
 		react(),
 		emdash({
 			database: sqlite({ url: "file:./data.db" }),
+			admin: {
+				locale: "fa",
+				locales: ["fa"],
+				siteName: "ام‌دش فارسی",
+				footerLabel: "ام‌دش فارسی",
+			},
+			fonts: { scripts: ["arabic"] },
 			storage: local({
 				directory: "./uploads",
 				baseUrl: "/_emdash/api/media/file",
@@ -29,8 +41,9 @@ export default defineConfig({
 	fonts: [
 		{
 			provider: fontProviders.google(),
-			name: "Inter",
+			name: "Vazirmatn",
 			cssVariable: "--font-body",
+			subsets: ["arabic", "latin"],
 			weights: [400, 500, 600, 700],
 			fallbacks: ["sans-serif"],
 		},

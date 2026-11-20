@@ -25,6 +25,7 @@ import * as React from "react";
 import { fetchMediaItem, type MediaItem, type MediaUpdateInput } from "../lib/api";
 import {
 	canonicalMediaProviderId,
+	formatPixels,
 	getMediaObjectPosition,
 	getMediaPreviewUrl,
 	localMediaFileUrl,
@@ -178,7 +179,7 @@ export function ImageFieldRenderer({
 	invalid = false,
 	thumbnail,
 }: ImageFieldRendererProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const labelled = labelledBy !== undefined;
 	const [pickerOpen, setPickerOpen] = React.useState(false);
 	const errorId = React.useId();
@@ -370,7 +371,7 @@ export function ImageFieldRenderer({
 		currentMedia?.height ?? (typeof value === "object" ? value.height : undefined);
 	const dimensions =
 		typeof currentWidth === "number" && typeof currentHeight === "number"
-			? `${currentWidth} × ${currentHeight}`
+			? `${formatPixels(currentWidth, i18n.locale)} × ${formatPixels(currentHeight, i18n.locale)}`
 			: undefined;
 	const mimeType =
 		currentMedia?.mimeType ??
@@ -562,7 +563,7 @@ export function ImageFieldRenderer({
 								{t`Dark mode variant`}
 							</Text>
 							<Text as="p" bold truncate>
-								{darkFilename}
+								<bdi dir="auto">{darkFilename}</bdi>
 							</Text>
 						</div>
 						<div className="flex basis-full flex-wrap items-center gap-2 sm:basis-auto">
@@ -691,7 +692,7 @@ export function ImageFieldRenderer({
 				<div className="flex w-full min-w-0 flex-col gap-1.5 @lg/featured:translate-y-1.5 @lg/featured:gap-3">
 					<div className="grid min-w-0 gap-1">
 						<Text as="p" bold truncate>
-							{selectedFilename}
+							<bdi dir="auto">{selectedFilename}</bdi>
 						</Text>
 						{metadata && (
 							<Text as="p" variant="secondary" size="xs" truncate>

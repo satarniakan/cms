@@ -444,7 +444,7 @@ function StatusRow({
 	activationError: boolean;
 	stateHeadingRef: React.RefObject<HTMLHeadingElement | null>;
 }) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const ready = progress?.readyCollections ?? 0;
 	const total = progress?.totalCollections ?? 0;
 	const active = activation.state === "active";
@@ -480,7 +480,7 @@ function StatusRow({
 			<>
 				{t`Ready`}:{" "}
 				<span dir="ltr" className="inline-block tabular-nums">
-					{ready} / {total}
+					{i18n.number(ready)} / {i18n.number(total)}
 				</span>
 			</>
 		) : (

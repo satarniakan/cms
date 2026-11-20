@@ -1,4 +1,5 @@
 import { Toasty } from "@cloudflare/kumo";
+import { i18n } from "@lingui/core";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -63,6 +64,35 @@ beforeEach(() => {
 });
 
 describe("SocialSettings", () => {
+	it.each(["fa", "ar"])("saves technical handles unchanged in %s", async (locale) => {
+		const previousLocale = i18n.locale;
+		const previousDirection = document.documentElement.dir;
+		try {
+			i18n.loadAndActivate({ locale, messages: {} });
+			document.documentElement.dir = "rtl";
+			const screen = await renderSocialSettings();
+			const twitter = screen.getByLabelText("Twitter");
+			const youtube = screen.getByLabelText("YouTube");
+			await twitter.fill("@example_123");
+			await youtube.fill("UC-AbC_123");
+			await expect.element(twitter).toHaveValue("@example_123");
+			await expect.element(youtube).toHaveValue("UC-AbC_123");
+			await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+			await vi.waitFor(() =>
+				expect(mockUpdateSettings).toHaveBeenCalledWith({
+					...defaultSettings,
+					social: { ...defaultSettings.social, twitter: "@example_123", youtube: "UC-AbC_123" },
+				}),
+			);
+			await expect
+				.element(screen.getByRole("button", { name: "Saved", exact: true }).first())
+				.toBeDisabled();
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+			document.documentElement.dir = previousDirection;
+		}
+	});
+
 	it("shows the shared frame while settings load", async () => {
 		mockFetchSettings.mockReturnValue(new Promise(() => undefined));
 		const screen = await renderSocialSettings();

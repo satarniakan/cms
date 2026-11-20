@@ -78,10 +78,10 @@ const TOOLBAR_MESSAGES = {
 	uploadingFile: msg({ id: "visualEditing.uploadingFile", message: "Uploading {filename}…" }),
 } satisfies Record<keyof VisualEditingToolbarLabels, MessageDescriptor>;
 
-function resolveToolbarMessage(messages: Messages, descriptor: MessageDescriptor): string {
+function resolveCatalogMessage(messages: Messages, descriptor: MessageDescriptor): string {
 	const translated = descriptor.id ? messages[descriptor.id] : undefined;
 	if (typeof translated === "string") return translated;
-	// Simple {name} placeholders are kept for the toolbar script to fill in.
+	// Simple {name} placeholders are kept for the caller to fill in.
 	if (
 		Array.isArray(translated) &&
 		translated.every((token) => typeof token === "string" || token.length === 1)
@@ -93,38 +93,48 @@ function resolveToolbarMessage(messages: Messages, descriptor: MessageDescriptor
 	return descriptor.message ?? "";
 }
 
+const BOOT_MESSAGE = msg({ id: "admin.bootLoading", message: "Loading {siteName}..." });
+
+/**
+ * Boot-screen text for the admin shell, which renders before the SPA can run
+ * Lingui, so it is translated from the catalog on the server.
+ */
+export function resolveAdminBootLabel(messages: Messages, siteName: string): string {
+	return resolveCatalogMessage(messages, BOOT_MESSAGE).replaceAll("{siteName}", siteName);
+}
+
 export function translateVisualEditingToolbarLabels(
 	messages: Messages,
 ): VisualEditingToolbarLabels {
 	return {
-		publish: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.publish),
-		publishing: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.publishing),
-		sessionExpired: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.sessionExpired),
-		refreshPage: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.refreshPage),
-		publishFailed: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.publishFailed),
-		editMode: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.editMode),
-		openInAdmin: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.openInAdmin),
-		hideToolbar: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.hideToolbar),
-		draft: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.draft),
-		published: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.published),
-		unpublishedChanges: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.unpublishedChanges),
-		unsaved: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.unsaved),
-		saving: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.saving),
-		saved: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.saved),
-		saveFailed: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.saveFailed),
-		image: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.image),
-		noImageSelected: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.noImageSelected),
-		altText: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.altText),
-		altTextPlaceholder: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.altTextPlaceholder),
-		replaceImage: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.replaceImage),
-		uploadImage: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.uploadImage),
-		removeImage: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.removeImage),
-		mediaLibrary: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.mediaLibrary),
-		back: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.back),
-		loading: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.loading),
-		noImagesFound: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.noImagesFound),
-		mediaLoadFailed: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.mediaLoadFailed),
-		uploadingFile: resolveToolbarMessage(messages, TOOLBAR_MESSAGES.uploadingFile),
+		publish: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.publish),
+		publishing: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.publishing),
+		sessionExpired: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.sessionExpired),
+		refreshPage: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.refreshPage),
+		publishFailed: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.publishFailed),
+		editMode: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.editMode),
+		openInAdmin: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.openInAdmin),
+		hideToolbar: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.hideToolbar),
+		draft: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.draft),
+		published: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.published),
+		unpublishedChanges: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.unpublishedChanges),
+		unsaved: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.unsaved),
+		saving: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.saving),
+		saved: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.saved),
+		saveFailed: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.saveFailed),
+		image: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.image),
+		noImageSelected: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.noImageSelected),
+		altText: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.altText),
+		altTextPlaceholder: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.altTextPlaceholder),
+		replaceImage: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.replaceImage),
+		uploadImage: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.uploadImage),
+		removeImage: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.removeImage),
+		mediaLibrary: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.mediaLibrary),
+		back: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.back),
+		loading: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.loading),
+		noImagesFound: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.noImagesFound),
+		mediaLoadFailed: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.mediaLoadFailed),
+		uploadingFile: resolveCatalogMessage(messages, TOOLBAR_MESSAGES.uploadingFile),
 	};
 }
 

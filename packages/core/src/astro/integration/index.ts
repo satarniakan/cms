@@ -610,12 +610,17 @@ export function emdash(config: EmDashConfig = {}): AstroIntegration {
 		}
 	}
 
+	if (config.admin?.locale !== undefined) {
+		const manifest = readAdminLocaleManifest(resolveAdminDist());
+		const locales = resolveAdminLocales([config.admin.locale], Object.keys(manifest));
+		resolvedConfig.admin = { ...config.admin, locale: locales.at(-1) };
+	}
 	if (config.admin?.locales !== undefined) {
 		const manifest = readAdminLocaleManifest(resolveAdminDist());
-		resolvedConfig.admin = {
-			...config.admin,
-			locales: resolveAdminLocales(config.admin.locales, Object.keys(manifest)),
-		};
+		const locales = resolveAdminLocales(config.admin.locales, Object.keys(manifest));
+		const locale = resolvedConfig.admin?.locale;
+		if (locale && !locales.includes(locale)) locales.push(locale);
+		resolvedConfig.admin = { ...resolvedConfig.admin, locales };
 	}
 	if (config.admin?.hiddenNavItems !== undefined) {
 		resolvedConfig.admin = {

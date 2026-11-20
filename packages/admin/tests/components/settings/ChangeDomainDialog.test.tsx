@@ -1,3 +1,4 @@
+import { i18n } from "@lingui/core";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -54,6 +55,29 @@ beforeEach(() => {
 });
 
 describe("ChangeDomainDialog", () => {
+	it.each(["fa", "ar"])(
+		"keeps a domain canonical with localized instructions in %s",
+		async (locale) => {
+			const previousLocale = i18n.locale;
+			const previousDirection = document.documentElement.dir;
+			try {
+				i18n.loadAndActivate({ locale, messages: {} });
+				document.documentElement.dir = "rtl";
+				const { dialog, input } = await openDialog();
+				await input.fill("site123.example");
+				await userEvent.keyboard("{Enter}");
+				await vi.waitFor(() =>
+					expect(mockChangeSiteDomain).toHaveBeenCalledExactlyOnceWith("site123.example"),
+				);
+				await expect.element(dialog).not.toBeInTheDocument();
+				expect(mockUpdateSettings).not.toHaveBeenCalled();
+			} finally {
+				i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+				document.documentElement.dir = previousDirection;
+			}
+		},
+	);
+
 	it("points at an empty domain when submitted, and sends nothing", async () => {
 		const { dialog, input } = await openDialog();
 		const action = dialog.getByRole("button", { name: "Check and switch" });

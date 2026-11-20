@@ -1,11 +1,44 @@
+import { i18n } from "@lingui/core";
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { RepeaterField } from "../../src/components/RepeaterField";
 import { render } from "../utils/render.tsx";
 
+import "../../dist/styles.css";
+
 describe("RepeaterField", () => {
 	describe("datetime sub-field", () => {
+		it("applies and clears a Persian datetime using the site timezone", async () => {
+			const previousLocale = i18n.locale;
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			try {
+				const onChange = vi.fn();
+				const screen = await render(
+					<RepeaterField
+						label="Recalls"
+						id="recalls"
+						timezone="Asia/Tehran"
+						value={[{ recall_date: "2026-03-21T07:00:00.000Z" }]}
+						onChange={onChange}
+						subFields={[{ slug: "recall_date", type: "datetime", label: "Recall date" }]}
+					/>,
+				);
+				await screen.getByRole("button", { name: "Recall date", exact: true }).click();
+				await expect.element(screen.getByRole("textbox", { name: "Hour" })).toHaveValue("۱۰");
+				await screen.getByRole("button", { name: / ۲-ام فروردین / }).click();
+				await screen.getByRole("button", { name: "Apply", exact: true }).click();
+				expect(onChange).toHaveBeenLastCalledWith([
+					expect.objectContaining({ recall_date: "2026-03-22T07:00:00.000Z" }),
+				]);
+				await screen.getByRole("button", { name: "Recall date", exact: true }).click();
+				await screen.getByRole("button", { name: "Clear", exact: true }).click();
+				expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ recall_date: null })]);
+			} finally {
+				i18n.activate(previousLocale);
+			}
+		});
+
 		it("displays a stored ISO datetime in the datetime-local input", async () => {
 			// Mirrors the top-level datetime widget contract: full ISO 8601
 			// values must round-trip through `<input type="datetime-local">`,

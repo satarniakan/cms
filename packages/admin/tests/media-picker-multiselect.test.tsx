@@ -6,6 +6,7 @@
  * added for galleries (#1436), plus a regression check that single-select
  * mode still works.
  */
+import { i18n } from "@lingui/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -217,6 +218,32 @@ describe("MediaPickerModal — multi-select", () => {
 			expect.objectContaining({ id: "m1", filename: "photo.jpg" }),
 		);
 		expect(onSelectMany).not.toHaveBeenCalled();
+	});
+
+	it("numbers the selection tray and the result range in Persian", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			const onSelectMany = vi.fn();
+			const screen = await renderModal({ multiple: true, onSelectMany });
+
+			await expect.element(screen.getByText(/۱-۳/)).toBeInTheDocument();
+
+			optionButton(screen, "landscape.png").click();
+			optionButton(screen, "photo.jpg").click();
+
+			// The surrounding words come from the active catalog, so only the digits
+			// are under test: a counter is Persian when it has no Latin digit.
+			await vi.waitFor(() => {
+				const counters = [...document.querySelectorAll("p")].filter((element) =>
+					/^[۰-۹]+ (of|از) ۲$/.test(element.textContent?.trim() ?? ""),
+				);
+				expect(counters).toHaveLength(2);
+			});
+			expect(onSelectMany).not.toHaveBeenCalled();
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
 	});
 
 	it("keeps selections when switching to a configured provider", async () => {

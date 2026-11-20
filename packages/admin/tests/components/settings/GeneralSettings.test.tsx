@@ -145,6 +145,55 @@ beforeEach(() => {
 });
 
 describe("GeneralSettings", () => {
+	it("saves Persian, Arabic and Latin page sizes without changing unrelated settings", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			const screen = await renderGeneralSettings();
+			const input = screen.getByLabelText("Posts Per Page");
+			await expect.element(input).toHaveValue("۱۰");
+			for (const text of ["۲۴", "٢٤", "24"]) {
+				await input.fill(text);
+				await expect.element(input).toHaveValue("۲۴");
+			}
+			await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+			await vi.waitFor(() => {
+				const { url: _url, ...withoutUrl } = defaultSettings;
+				expect(mockUpdateSettings).toHaveBeenCalledExactlyOnceWith({
+					...withoutUrl,
+					postsPerPage: 24,
+				});
+			});
+			await expect.element(input).toHaveValue("۲۴");
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
+	});
+
+	it("keeps empty and invalid Persian page sizes unsaved until corrected", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			const screen = await renderGeneralSettings();
+			const input = screen.getByLabelText("Posts Per Page");
+			for (const text of ["", "۰", "۱۰۱", "۱٫۵", "-", "1e999"]) {
+				await input.fill(text);
+				await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+				expect((input.element() as HTMLInputElement).checkValidity()).toBe(false);
+				expect(mockUpdateSettings).not.toHaveBeenCalled();
+			}
+			await input.fill("۱۰۰");
+			await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+			await vi.waitFor(() =>
+				expect(mockUpdateSettings).toHaveBeenCalledWith(
+					expect.objectContaining({ postsPerPage: 100 }),
+				),
+			);
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
+	});
+
 	it("shows the shared frame while settings load", async () => {
 		mockFetchSettings.mockReturnValue(new Promise(() => undefined));
 		const screen = await renderGeneralSettings();
@@ -230,6 +279,24 @@ describe("GeneralSettings", () => {
 		const dirtyButtons = screen.getByRole("button", { name: "Save", exact: true }).all();
 		expect(dirtyButtons).toHaveLength(2);
 		for (const button of dirtyButtons) await expect.element(button).toBeEnabled();
+	});
+
+	it("previews a Persian calendar date while saving the format pattern unchanged", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			const screen = await renderGeneralSettings();
+			await screen.getByLabelText("Date Format").fill("yyyy/MM/dd");
+			await expect.element(screen.getByText(/۱۴۰۴\/۱۱\/۰۳/)).toBeInTheDocument();
+			await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+			await vi.waitFor(() =>
+				expect(mockUpdateSettings).toHaveBeenCalledWith(
+					expect.objectContaining({ dateFormat: "yyyy/MM/dd" }),
+				),
+			);
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
 	});
 
 	it("updates the date preview without preventing themes from using other patterns", async () => {

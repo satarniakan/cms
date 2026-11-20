@@ -1,6 +1,7 @@
+import { i18n } from "@lingui/core";
 import * as React from "react";
-import { describe, expect, it } from "vitest";
-import { page as browser } from "vitest/browser";
+import { afterEach, describe, expect, it } from "vitest";
+import { page as browser, userEvent } from "vitest/browser";
 
 import { ListPaginationFooter } from "../../src/components/ListPaginationFooter";
 import { render } from "../utils/render.tsx";
@@ -12,7 +13,15 @@ const SEARCH_LOAD_MS = 50;
  * does, unless `pageLoadMs` is set. Typing in the search box, or pressing
  * Reload, starts a load the footer didn't request.
  */
-function Harness({ pageLoadMs, initialPage = 1 }: { pageLoadMs?: number; initialPage?: number }) {
+function Harness({
+	pageLoadMs,
+	initialPage = 1,
+	totalCount = 60,
+}: {
+	pageLoadMs?: number;
+	initialPage?: number;
+	totalCount?: number;
+}) {
 	const [page, setPage] = React.useState(initialPage);
 	const [perPage, setPerPage] = React.useState(20);
 	const [isPending, setIsPending] = React.useState(false);
@@ -37,7 +46,7 @@ function Harness({ pageLoadMs, initialPage = 1 }: { pageLoadMs?: number; initial
 				pagination={{
 					page,
 					perPage,
-					totalCount: 60,
+					totalCount,
 					isPending,
 					onPageChange(nextPage) {
 						setPage(nextPage);
@@ -58,7 +67,76 @@ async function settle() {
 	await new Promise((resolve) => setTimeout(resolve, SEARCH_LOAD_MS));
 }
 
+afterEach(() => i18n.loadAndActivate({ locale: "en", messages: {} }));
+
 describe("ListPaginationFooter", () => {
+	it.each([undefined, 50])(
+		"uses Persian labels for numeric choices and keeps numeric page values (load=%s)",
+		async (pageLoadMs) => {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			const screen = await render(<Harness pageLoadMs={pageLoadMs} />);
+			const page = screen.getByRole("combobox", { name: "Page number" });
+			await expect.element(page).toHaveTextContent("۱");
+			await page.click();
+			await browser.getByRole("option", { name: "۲", exact: true }).click();
+			await expect.element(screen.getByText("Showing \u2066۲۱-۴۰\u2069 of ۶۰")).toBeInTheDocument();
+			await expect.poll(() => document.activeElement).toBe(page.element());
+
+			const pageSize = screen.getByRole("combobox", { name: "Page size" });
+			await expect.element(pageSize).toHaveTextContent("۲۰");
+			await pageSize.click();
+			await browser.getByRole("option", { name: "۵۰", exact: true }).click();
+			await expect.element(page).toHaveTextContent("۱");
+			await expect.element(pageSize).toHaveTextContent("۵۰");
+			await expect.poll(() => document.activeElement).toBe(pageSize.element());
+		},
+	);
+
+	it("accepts Persian, Arabic and Latin page numbers for large lists without jumping while typing", async () => {
+		i18n.loadAndActivate({ locale: "fa", messages: {} });
+		const screen = await render(<Harness totalCount={4000} />);
+		const page = screen.getByRole("textbox", { name: "Page number" });
+		for (const text of ["۱۲", "٣٤", "56"]) {
+			await page.fill(text);
+			await userEvent.keyboard("{Enter}");
+			await expect.element(page).toHaveFocus();
+		}
+		await expect.element(page).toHaveValue("۵۶");
+		await expect
+			.element(screen.getByText("Showing \u2066۱۱۰۱-۱۱۲۰\u2069 of ۴٬۰۰۰"))
+			.toBeInTheDocument();
+		await page.fill("۵۷");
+		await expect
+			.element(screen.getByText("Showing \u2066۱۱۰۱-۱۱۲۰\u2069 of ۴٬۰۰۰"))
+			.toBeInTheDocument();
+		await screen.getByRole("textbox", { name: "Search" }).click();
+		await expect
+			.element(screen.getByText("Showing \u2066۱۱۲۱-۱۱۴۰\u2069 of ۴٬۰۰۰"))
+			.toBeInTheDocument();
+	});
+
+	it("restores invalid page text, bounds valid values, and handles an empty list", async () => {
+		i18n.loadAndActivate({ locale: "fa", messages: {} });
+		const screen = await render(<Harness totalCount={4000} />);
+		const page = screen.getByRole("textbox", { name: "Page number" });
+		for (const text of ["", "۱٫۵", "۱۲abc", "۹۹۹۹۹۹۹۹۹۹۹۹۹۹۹۹۹۹۹۹۹"]) {
+			await page.fill(text);
+			await userEvent.keyboard("{Enter}");
+			await expect.element(page).toHaveValue("۱");
+		}
+		await page.fill("۹۹۹");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page).toHaveValue("۲۰۰");
+		await expect.element(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+		await page.fill("۰");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page).toHaveValue("۱");
+		await screen.rerender(<Harness totalCount={0} />);
+		await expect.element(screen.getByText("Showing \u2066۰-۰\u2069 of ۰")).toBeInTheDocument();
+		await expect.element(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+		await expect.element(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
+	});
+
 	it("returns focus to the control after the page it requested loads", async () => {
 		const screen = await render(<Harness pageLoadMs={50} />);
 

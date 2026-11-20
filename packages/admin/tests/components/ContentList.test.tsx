@@ -508,6 +508,40 @@ describe("ContentList", () => {
 			});
 		});
 
+		it("returns Gregorian boundaries from a Jalali date range", async () => {
+			const previousLocale = i18n.locale;
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			try {
+				const onDateFilterChange = vi.fn();
+				const screen = await render(
+					<ContentList
+						{...defaultProps}
+						items={[makeItem()]}
+						statusFilter="all"
+						onStatusFilterChange={vi.fn()}
+						dateFilter={{ field: "createdAt", from: "2026-03-21", to: "" }}
+						onDateFilterChange={onDateFilterChange}
+					/>,
+				);
+				await screen.getByRole("button", { name: /Filter by date range:/ }).click();
+				await expect.element(screen.getByText("فروردین ۱۴۰۵", { exact: true })).toBeVisible();
+				await screen.getByRole("button", { name: / ۴-ام فروردین / }).click();
+				expect(onDateFilterChange).toHaveBeenLastCalledWith({
+					field: "createdAt",
+					from: "2026-03-21",
+					to: "2026-03-24",
+				});
+				await screen.getByRole("button", { name: "Clear", exact: true }).click();
+				expect(onDateFilterChange).toHaveBeenLastCalledWith({
+					field: "createdAt",
+					from: "",
+					to: "",
+				});
+			} finally {
+				i18n.activate(previousLocale);
+			}
+		});
+
 		it("uses the active admin locale and direction in the calendar", async () => {
 			const previousLocale = i18n.locale;
 			i18n.load("ar", {});

@@ -71,6 +71,25 @@ describe("readAdminLocaleManifest", () => {
 	});
 });
 
+it("keeps a configured Persian locale despite English cookies and browser preferences", async () => {
+	vi.stubGlobal("__EMDASH_ADMIN_LOCALE__", "fa");
+	vi.stubGlobal("__EMDASH_ADMIN_LOCALES__", ["en", "fa"]);
+	vi.resetModules();
+	try {
+		const config = await import("@emdash-cms/admin/locales/config");
+		expect(config.DEFAULT_LOCALE).toBe("fa");
+		expect(config.SUPPORTED_LOCALES.map((locale) => locale.code)).toEqual(["fa"]);
+		const request = new Request("https://example.com", {
+			headers: { cookie: "emdash-locale=en", "accept-language": "en-US" },
+		});
+		expect(config.resolveLocale(request)).toBe("fa");
+		expect(config.getLocaleDir("fa")).toBe("rtl");
+	} finally {
+		vi.unstubAllGlobals();
+		vi.resetModules();
+	}
+});
+
 describe("resolveAdminLocales", () => {
 	const available = ["en", "de", "en-GB", "es-419", "sr-Latn", "pt-BR"];
 

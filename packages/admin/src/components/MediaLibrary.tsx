@@ -1631,6 +1631,7 @@ interface MediaListItemProps {
 }
 
 function MediaListItem({ item, selected, draggable, isMoving, onClick }: MediaListItemProps) {
+	const { i18n } = useLingui();
 	const isImage = item.mimeType.startsWith("image/");
 	const localItem = isLocalMediaItem(item) ? item : null;
 	const previewUrl = getMediaPreviewUrl(item.url, item.contentHash);
@@ -1678,7 +1679,7 @@ function MediaListItem({ item, selected, draggable, isMoving, onClick }: MediaLi
 			<MediaListDetailCells
 				filename={item.filename}
 				mimeType={item.mimeType}
-				size={formatFileSize(item.size)}
+				size={formatFileSize(item.size, i18n.locale)}
 				hasAlt={Boolean(item.alt)}
 			/>
 		</tr>
@@ -1694,6 +1695,7 @@ interface ProviderListItemProps {
 }
 
 function ProviderListItem({ item, selected, onClick, onDimensionsLoaded }: ProviderListItemProps) {
+	const { i18n } = useLingui();
 	const size = item.size ?? metaNumber(item.meta, "size");
 
 	const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -1729,7 +1731,7 @@ function ProviderListItem({ item, selected, onClick, onDimensionsLoaded }: Provi
 			<MediaListDetailCells
 				filename={item.filename}
 				mimeType={item.mimeType}
-				size={size ? formatFileSize(size) : undefined}
+				size={size ? formatFileSize(size, i18n.locale) : undefined}
 				hasAlt={Boolean(item.alt)}
 			/>
 		</tr>

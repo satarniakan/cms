@@ -31,6 +31,8 @@ import { diffVersion } from "../../src/lib/revision-diff/index.js";
 import { withAutosavedDraft } from "../../src/lib/revision-list-cache";
 import { render } from "../utils/render.tsx";
 
+import "../../dist/styles.css";
+
 function makeByline(overrides: Partial<BylineSummary> = {}): BylineSummary {
 	return {
 		id: "byline-1",
@@ -1583,6 +1585,38 @@ describe("ContentEditor", () => {
 			);
 		});
 
+		it("saves a Persian datetime selection in the site timezone", async () => {
+			const previousLocale = i18n.locale;
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			try {
+				const onSave = vi.fn();
+				const screen = await renderEditor({
+					isNew: false,
+					onSave,
+					timezone: "Asia/Tehran",
+					item: makeItem({ data: { title: "Recall", recall_date: "2026-03-21T07:00:00.000Z" } }),
+					fields: {
+						title: { kind: "string", label: "Title", required: true },
+						recall_date: { kind: "datetime", label: "Recall date" },
+					},
+				});
+				await screen.getByRole("button", { name: "Recall date", exact: true }).click();
+				await expect.element(screen.getByText("فروردین ۱۴۰۵", { exact: true })).toBeVisible();
+				await expect.element(screen.getByRole("textbox", { name: "Hour" })).toHaveValue("۱۰");
+				await screen.getByRole("button", { name: / ۲-ام فروردین / }).click();
+				await screen.getByRole("textbox", { name: "Minute" }).fill("۴۵");
+				await screen.getByRole("button", { name: "Apply", exact: true }).click();
+				await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+				expect(onSave).toHaveBeenCalledWith(
+					expect.objectContaining({
+						data: expect.objectContaining({ recall_date: "2026-03-22T07:15:00.000Z" }),
+					}),
+				);
+			} finally {
+				i18n.activate(previousLocale);
+			}
+		});
+
 		it("renders datetime fields as datetime-local inputs", async () => {
 			const screen = await renderEditor({
 				fields: { recall_date: { kind: "datetime", label: "Recall date" } },
@@ -1691,6 +1725,32 @@ describe("ContentEditor", () => {
 			await screen.getByRole("button", { name: "Save" }).first().click();
 
 			expect(onSave).not.toHaveBeenCalled();
+		});
+
+		it("validates a required Persian datetime after clearing it", async () => {
+			const previousLocale = i18n.locale;
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			try {
+				const onSave = vi.fn();
+				const screen = await renderEditor({
+					isNew: false,
+					onSave,
+					item: makeItem({ data: { title: "Recall", recall_date: "2026-03-21T07:00:00.000Z" } }),
+					fields: {
+						title: { kind: "string", label: "Title", required: true },
+						recall_date: { kind: "datetime", label: "Recall date", required: true },
+					},
+				});
+				await screen.getByRole("button", { name: "Recall date", exact: true }).click();
+				await screen.getByRole("button", { name: "Clear", exact: true }).click();
+				await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+				expect(onSave).not.toHaveBeenCalled();
+				await expect
+					.element(screen.getByRole("button", { name: "Recall date", exact: true }))
+					.toHaveAttribute("aria-invalid", "true");
+			} finally {
+				i18n.activate(previousLocale);
+			}
 		});
 
 		it("renders json fields as a textarea", async () => {

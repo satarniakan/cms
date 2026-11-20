@@ -1,4 +1,5 @@
 import { Toast } from "@cloudflare/kumo";
+import { i18n } from "@lingui/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,7 +119,24 @@ describe("CalendarPage", () => {
 
 	afterEach(async () => {
 		globalThis.fetch = originalFetch;
+		i18n.loadAndActivate({ locale: "en", messages: {} });
 		await page.viewport(1280, 800);
+	});
+
+	it("falls back to the current month when a Persian month exceeds the API date range", async () => {
+		i18n.loadAndActivate({ locale: "fa", messages: {} });
+		router.search = { month: "9999-12", view: "agenda" };
+		serveCalendar(() =>
+			Response.json({ data: { items: [entry("current", new Date().toISOString())] } }),
+		);
+
+		const screen = await renderPage();
+
+		await expect.element(screen.getByRole("link", { name: /Entry current/ })).toBeVisible();
+		const input = vi.mocked(globalThis.fetch).mock.calls[0]![0];
+		const request = input instanceof Request ? input.url : input.toString();
+		const from = new URL(request, location.origin).searchParams.get("from");
+		expect(from).toMatch(/^\d{4}-/);
 	});
 
 	it("ignores filters in the URL that match no collection or locale", async () => {

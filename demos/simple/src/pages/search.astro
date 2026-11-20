@@ -27,7 +27,7 @@ function escapeHtml(text: string) {
 // title. When it is the whole title, show its highlights in the heading
 // instead of repeating the title underneath.
 const rows = results.map((result) => {
-	const title = result.title ?? "Untitled";
+	const title = result.title ?? "بدون عنوان";
 	const snippetIsTitle =
 		result.snippet?.replaceAll("<mark>", "").replaceAll("</mark>", "") ===
 		escapeHtml(title);
@@ -39,27 +39,26 @@ const rows = results.map((result) => {
 	};
 });
 
-const countLabel = nextCursor
-	? `Top ${rows.length} results`
-	: `${rows.length} ${rows.length === 1 ? "result" : "results"}`;
+const count = rows.length.toLocaleString("fa-IR");
+const countLabel = nextCursor ? `${count} نتیجهٔ برتر` : `${count} نتیجه`;
 ---
 
 <Base
-	title={query ? `Search: ${query}` : "Search"}
-	description="Search blog posts"
+	title={query ? `جست‌وجو: ${query}` : "جست‌وجو"}
+	description="جست‌وجو در نوشته‌های وبلاگ"
 >
 	<header class="band intro">
 		<div class="frame">
-			<p class="eyebrow">Search</p>
-			<h1 class="intro__title">What are you looking for?</h1>
+			<p class="eyebrow">جست‌وجو</p>
+			<h1 class="intro__title">دنبال چه می‌گردید؟</h1>
 			<form
 				method="get"
 				action="/search"
 				role="search"
-				aria-label="Posts"
+				aria-label="نوشته‌ها"
 				class="search-form"
 			>
-				<label for="search-query" class="sr-only">Search posts</label>
+				<label for="search-query" class="sr-only">جست‌وجوی نوشته‌ها</label>
 				<div class="search-field">
 					<svg
 						class="search-field__icon"
@@ -79,17 +78,18 @@ const countLabel = nextCursor
 						type="search"
 						name="q"
 						value={query}
-						placeholder="Search posts"
+						placeholder="جست‌وجوی نوشته‌ها"
 						autofocus={!query}
 					/>
-					<button type="submit" class="btn search-field__submit">Search</button>
+					<button type="submit" class="btn search-field__submit">جست‌وجو</button
+					>
 				</div>
 			</form>
 			{
 				!query && (
 					<p class="search-hint">
-						Searches post titles and full text. Not sure where to start?{" "}
-						<a href="/posts">Browse all posts</a>.
+						در عنوان و متن کامل نوشته‌ها جست‌وجو کنید یا{" "}
+						<a href="/posts">همهٔ نوشته‌ها را ببینید</a>.
 					</p>
 				)
 			}
@@ -104,10 +104,10 @@ const countLabel = nextCursor
 						<>
 							<div class="section-head">
 								<p class="search-summary">
-									<strong>{countLabel}</strong> for “{query}”
+									<strong>{countLabel}</strong> برای «{query}»
 								</p>
 								<a href="/posts" class="arrow-link">
-									All posts
+									همهٔ نوشته‌ها
 									<svg
 										viewBox="0 0 24 24"
 										fill="none"
@@ -123,8 +123,13 @@ const countLabel = nextCursor
 								</a>
 							</div>
 							<ol class="results" role="list">
-								{rows.map((row) => (
-									<li class="result">
+								{rows.map((row, index) => (
+									<li
+										class="result"
+										data-number={(index + 1).toLocaleString("fa-IR", {
+											minimumIntegerDigits: 2,
+										})}
+									>
 										<div class="result__body">
 											<h2 class="result__title">
 												<a href={row.path} class="result__link">
@@ -161,14 +166,16 @@ const countLabel = nextCursor
 						</>
 					) : (
 						<div class="empty-state">
-							<h2 class="empty-state__title">No results for “{query}”</h2>
+							<h2 class="empty-state__title">
+								نتیجه‌ای برای «{query}» پیدا نشد
+							</h2>
 							<p class="empty-state__text">
-								Check the spelling, try fewer or different words, or browse
-								every post instead.
+								املای عبارت را بررسی کنید، واژه‌های کوتاه‌تر یا متفاوت بنویسید
+								یا همهٔ نوشته‌ها را مرور کنید.
 							</p>
 							<div class="empty-state__actions">
 								<a href="/posts" class="btn btn--ghost">
-									Browse all posts
+									همهٔ نوشته‌ها را ببینید
 								</a>
 							</div>
 						</div>
@@ -271,7 +278,6 @@ const countLabel = nextCursor
 	}
 
 	.results {
-		counter-reset: result;
 		list-style: none;
 		padding: var(--card-padding);
 		border-radius: var(--radius-xl);
@@ -287,14 +293,13 @@ const countLabel = nextCursor
 		gap: var(--spacing-4);
 		padding: var(--spacing-5);
 		border-radius: var(--radius-lg);
-		counter-increment: result;
 		transition: background-color var(--transition-fast);
 	}
 
 	.result::before {
-		content: counter(result, decimal-leading-zero);
-		content: counter(result, decimal-leading-zero) / "";
-		font-family: var(--font-mono);
+		content: attr(data-number);
+		content: attr(data-number) / "";
+		font-family: var(--font-body);
 		font-size: var(--font-size-label);
 		color: var(--color-muted);
 		font-variant-numeric: tabular-nums;

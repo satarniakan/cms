@@ -1,4 +1,5 @@
 import { Dialog } from "@cloudflare/kumo";
+import { i18n } from "@lingui/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -315,6 +316,22 @@ describe("MediaDetailPanel", () => {
 		await expect.element(screen.getByText("Dimensions:")).toBeInTheDocument();
 		await expect.element(screen.getByText("Uploaded:")).toBeInTheDocument();
 		await expect.element(screen.getByText("Format:")).toBeInTheDocument();
+	});
+
+	it("shows file size and dimensions with Persian digits, keeping width before height", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			const screen = await renderPanel({
+				item: makeImageItem({ size: 204800, width: 1920, height: 1080 }),
+			});
+			await expect.element(screen.getByText("۲۰۰ کیلوبایت", { exact: true })).toBeInTheDocument();
+			const dimensions = screen.getByText("۱۹۲۰ × ۱۰۸۰", { exact: true });
+			await expect.element(dimensions).toBeInTheDocument();
+			expect(dimensions.element().closest("[dir]")?.getAttribute("dir")).toBe("ltr");
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
 	});
 
 	it("keeps the Uploaded row in the wider column when dimensions are missing", async () => {
@@ -848,6 +865,31 @@ describe("MediaDetailPanel", () => {
 		resetCrop.element().click();
 		await expect.element(createCopy).toBeDisabled();
 		await expect.element(replaceOriginal).toBeDisabled();
+	});
+
+	it("counts the crop output in Persian digits while the draft stays cropable", async () => {
+		const previousLocale = i18n.locale;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			const screen = await renderPanel({
+				item: makeLocalItem({ url: TEST_IMAGE_URL }),
+				canDuplicateCrop: true,
+			});
+			screen.getByRole("tab", { name: "Edit image" }).element().click();
+			const cropTab = screen.getByRole("tab", { name: "Crop" });
+			await expect.element(cropTab).toBeVisible();
+			if (cropTab.element().getAttribute("aria-selected") !== "true") cropTab.element().click();
+			const output = screen.getByLabelText("Crop output dimensions");
+			await expect.element(output).toHaveTextContent("۱۰۰ × ۱۰۰");
+			expect(output.element().querySelector("[dir]")?.getAttribute("dir")).toBe("ltr");
+			await resizeCrop(screen);
+			await expect.element(output).toHaveTextContent("۸۰ × ۸۰");
+			await expect
+				.element(screen.getByRole("button", { name: "Create cropped copy" }))
+				.toBeEnabled();
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+		}
 	});
 
 	it("offers common aspect ratios and limits replacement to the original ratio", async () => {
@@ -2126,6 +2168,27 @@ describe("MediaDetailPanel file URL", () => {
 		await expect.element(copyButton).toBeVisible();
 		copyButton.element().click();
 		await vi.waitFor(() => expect(clipboardWrite).toHaveBeenCalledWith(absolute));
+	});
+
+	it("reads the file URL left to right while the panel reads right to left", async () => {
+		const previousLocale = i18n.locale;
+		const previousDirection = document.documentElement.dir;
+		try {
+			i18n.loadAndActivate({ locale: "fa", messages: {} });
+			document.documentElement.dir = "rtl";
+			const screen = await renderPanel({
+				item: makeImageItem({ url: "/_emdash/api/media/file/01ABC.jpg" }),
+			});
+
+			// Inheriting the page direction moves the leading slash to the end of the
+			// path, which is what a Persian editor sees.
+			const urlElement = screen.getByText("/_emdash/api/media/file/01ABC.jpg").element();
+			expect(getComputedStyle(urlElement).direction).toBe("ltr");
+			expect(getComputedStyle(screen.getByText("URL:").element()).direction).toBe("rtl");
+		} finally {
+			i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+			document.documentElement.dir = previousDirection;
+		}
 	});
 
 	it("does not expose provider preview URLs as public URLs", async () => {

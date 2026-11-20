@@ -5,6 +5,7 @@ import { CalendarBlank, CaretDown } from "@phosphor-icons/react";
 import * as React from "react";
 
 import {
+	calendarMonth,
 	isMonthCutOff,
 	shiftDay,
 	type CalendarDisplay,
@@ -49,8 +50,10 @@ export function CalendarAgenda({
 
 	if (loading) return <CalendarAgendaSkeleton />;
 
-	const cutOff = isMonthCutOff(month, loadedThrough);
-	const keys = [...days.keys()].filter((day) => day.startsWith(month)).toSorted();
+	const cutOff = isMonthCutOff(month, loadedThrough, display.locale);
+	const keys = [...days.keys()]
+		.filter((day) => calendarMonth(day, display.locale) === month)
+		.toSorted();
 	if (keys.length === 0) {
 		const monthTitle = display.monthTitle(month);
 		return (
@@ -84,7 +87,7 @@ export function CalendarAgenda({
 		);
 	}
 
-	const isCurrentMonth = today.startsWith(month);
+	const isCurrentMonth = calendarMonth(today, display.locale) === month;
 	const earlier = isCurrentMonth ? keys.filter((day) => day < today) : [];
 	const earlierCount = earlier.reduce((count, day) => count + (days.get(day)?.length ?? 0), 0);
 	// Earlier days start expanded while one of them holds an overdue entry.

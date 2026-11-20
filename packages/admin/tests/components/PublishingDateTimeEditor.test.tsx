@@ -15,6 +15,7 @@ import "../../dist/styles.css";
 
 afterEach(() => {
 	vi.useRealTimers();
+	i18n.loadAndActivate({ locale: "en", messages: {} });
 });
 
 it("returns the calendar to the current month when a new entry has no saved date", async () => {
@@ -45,6 +46,27 @@ it("returns the calendar to the current month when a new entry has no saved date
 	);
 
 	await expect.element(screen.getByText(currentMonth, { exact: true })).toBeVisible();
+});
+
+it("uses Jalali months and Persian time digits while returning Gregorian dates", async () => {
+	i18n.loadAndActivate({ locale: "fa", messages: {} });
+	const onDateChange = vi.fn();
+	const screen = await render(
+		<PublishingDateTimeFields
+			date={new Date(2026, 2, 21, 12)}
+			time="21:05"
+			dateAriaLabel="Publication date"
+			onDateChange={onDateChange}
+			onTimeChange={vi.fn()}
+		/>,
+	);
+
+	await expect.element(screen.getByText("فروردین ۱۴۰۵", { exact: true })).toBeVisible();
+	await expect.element(screen.getByRole("textbox", { name: "Hour" })).toHaveValue("۲۱");
+	await expect.element(screen.getByRole("textbox", { name: "Minute" })).toHaveValue("۰۵");
+	await screen.getByRole("button", { name: / ۲-ام فروردین / }).click();
+	const selected = onDateChange.mock.calls[0]?.[0] as Date;
+	expect([selected.getFullYear(), selected.getMonth(), selected.getDate()]).toEqual([2026, 2, 22]);
 });
 
 function dayPeriodLabel(hour: number): string {

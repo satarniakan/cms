@@ -1887,6 +1887,11 @@ msgstr "Adds rules to robots.txt that ask AI crawlers not to use this site for t
 msgid "admin"
 msgstr "admin"
 
+#. js-lingui-explicit-id
+#: packages/admin/src/locales/server.ts:96
+msgid "admin.bootLoading"
+msgstr "Loading {siteName}..."
+
 #: packages/admin/src/components/settings/ApiTokenSettings.tsx:117
 #: packages/admin/src/components/Sidebar.tsx:460
 #: packages/admin/src/components/users/roleDefinitions.ts:42
@@ -3590,6 +3595,11 @@ msgstr "Collapse all"
 #: packages/admin/src/components/PluginManager.tsx:580
 msgid "Collapse details"
 msgstr "Collapse details"
+
+#: packages/admin/src/components/Header.tsx:64
+#: packages/admin/src/components/Sidebar.tsx:779
+msgid "Collapse sidebar"
+msgstr "Collapse sidebar"
 
 #: packages/admin/src/components/users/InviteUserModal.tsx:187
 msgid "colleague@example.com"
@@ -6281,6 +6291,11 @@ msgstr "Expand all"
 #: packages/admin/src/components/PluginManager.tsx:580
 msgid "Expand details"
 msgstr "Expand details"
+
+#: packages/admin/src/components/Header.tsx:64
+#: packages/admin/src/components/Sidebar.tsx:779
+msgid "Expand sidebar"
+msgstr "Expand sidebar"
 
 #: packages/admin/src/components/settings/transfer/ExportSection.tsx:303
 #: packages/admin/src/components/settings/transfer/ExportSection.tsx:307

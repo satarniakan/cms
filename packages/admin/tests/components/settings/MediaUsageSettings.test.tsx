@@ -142,6 +142,35 @@ describe("MediaUsageSettings", () => {
 		vi.restoreAllMocks();
 	});
 
+	it.each([
+		{ locale: "fa", expected: "۱٬۲۰۴ / ۲٬۳۴۵" },
+		{
+			locale: "ar",
+			expected: `${new Intl.NumberFormat("ar").format(1204)} / ${new Intl.NumberFormat("ar").format(2345)}`,
+		},
+	])(
+		"localizes progress counts in $locale without enabling tracking again",
+		async ({ locale, expected }) => {
+			const previousLocale = i18n.locale;
+			try {
+				i18n.loadAndActivate({ locale, messages: {} });
+				const progress = { status: "indexing", readyCollections: 1204, totalCollections: 2345 };
+				activationMocks.fetchStatus.mockResolvedValue(status("active"));
+				activationMocks.fetchProgress.mockResolvedValue(progress);
+				activationMocks.advanceProgress.mockResolvedValue({
+					activation: status("active"),
+					progress,
+					nextRequestInMs: null,
+				});
+				const { screen } = await renderPage();
+				await expect.element(screen.getByText(expected, { exact: true })).toBeVisible();
+				expect(activationMocks.advance).not.toHaveBeenCalled();
+			} finally {
+				i18n.loadAndActivate({ locale: previousLocale, messages: {} });
+			}
+		},
+	);
+
 	it("denies a direct Editor visit before requesting activation status", async () => {
 		setCurrentUser(40);
 
@@ -533,8 +562,9 @@ describe("MediaUsageSettings", () => {
 		try {
 			const { screen } = await renderPage();
 
-			await expect.element(screen.getByText("Ready: 1 / 2")).toBeVisible();
-			await expect.element(screen.getByText("1 / 2")).toHaveAttribute("dir", "ltr");
+			const counts = `${new Intl.NumberFormat("ar").format(1)} / ${new Intl.NumberFormat("ar").format(2)}`;
+			await expect.element(screen.getByText(`Ready: ${counts}`)).toBeVisible();
+			await expect.element(screen.getByText(counts, { exact: true })).toHaveAttribute("dir", "ltr");
 		} finally {
 			i18n.loadAndActivate({ locale: "en", messages: {} });
 		}

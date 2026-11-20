@@ -53,6 +53,7 @@ import {
 } from "../lib/api.js";
 import { useCurrentUser } from "../lib/api/current-user.js";
 import { useDebouncedValue } from "../lib/hooks.js";
+import { localizeNumberInput } from "../lib/localized-number.js";
 import { canonicalMediaProviderId, providerItemToMediaItem } from "../lib/media-utils.js";
 import { matchesMimeAllowlist, mimeFromUrl } from "../lib/mime-utils.js";
 import {
@@ -221,7 +222,7 @@ export function MediaPickerModal({
 	mediaKind = "image",
 	localOnly = false,
 }: MediaPickerModalProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const queryClient = useQueryClient();
 	const currentUser = useCurrentUser().data;
 	const isFileKind = mediaKind === "file";
@@ -719,7 +720,8 @@ export function MediaPickerModal({
 			next.splice(to, 0, moved!);
 			return next;
 		});
-		setLiveMessage(t`Moved ${filename} to position ${to + 1}.`);
+		const position = i18n.number(to + 1);
+		setLiveMessage(t`Moved ${filename} to position ${position}.`);
 	};
 	const removeSelectedItem = (selected: SelectedMedia) => {
 		selectionOrderEditedRef.current = true;
@@ -1603,9 +1605,17 @@ export function MediaPickerModal({
 										}}
 									>
 										<Pagination.Info className="min-w-0 flex-1">
-											{({ pageShowingRange, totalCount: count }) => (
-												<span role="status">{t`Showing ${pageShowingRange} of ${count ?? 0}`}</span>
-											)}
+											{({ pageShowingRange: range, totalCount: count }) => {
+												const total = count ?? 0;
+												const shown = total === 0 ? "0-0" : range;
+												const pageShowingRange =
+													i18n.locale === "fa"
+														? `\u2066${localizeNumberInput(shown, i18n.locale)}\u2069`
+														: shown;
+												return (
+													<span role="status">{t`Showing ${pageShowingRange} of ${i18n.number(total)}`}</span>
+												);
+											}}
 										</Pagination.Info>
 										<div inert={localQuery.isFetching || undefined} className="contents">
 											<Pagination.Controls

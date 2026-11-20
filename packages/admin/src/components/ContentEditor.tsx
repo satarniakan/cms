@@ -64,7 +64,7 @@ import {
 import { ListSaver } from "../lib/co-editing/outside-lists.js";
 import type { DraftCapture, RichTextBinding, RoomEditing } from "../lib/co-editing/types.js";
 import { getContentPublishingState } from "../lib/content-publishing-state.js";
-import { fromDatetimeLocalInputValue, toDatetimeLocalInputValue } from "../lib/datetime-local.js";
+import { toDatetimeLocalInputValue } from "../lib/datetime-local.js";
 import { getEntryTitle } from "../lib/entryTitle.js";
 import { getFieldLabel } from "../lib/field-label.js";
 import { useStableCallback } from "../lib/hooks.js";
@@ -111,6 +111,8 @@ import {
 import { focusDocumentStart } from "./editor/BlockCommands.js";
 import { EditorDraftPatchPreview } from "./EditorDraftPatchPreview.js";
 import { ImageFieldRenderer, type ImageFieldValue } from "./ImageFieldRenderer.js";
+import { LocalizedDateTimeInput } from "./LocalizedDateTimeInput.js";
+import { LocalizedNumberInput } from "./LocalizedNumberInput.js";
 import { NonListFieldValue, isNonListValue } from "./NonListFieldValue.js";
 import { PluginFieldErrorBoundary } from "./PluginFieldErrorBoundary.js";
 import { FieldPresence } from "./presence/FieldPresence.js";
@@ -3713,12 +3715,11 @@ function FieldRenderer({
 			if (quiet) {
 				return (
 					<QuietControl meta={hint} slotId={chrome?.countSlotId}>
-						<Input
+						<LocalizedNumberInput
 							id={id}
-							type="number"
 							step={field.integer ? "1" : "any"}
-							value={typeof value === "number" ? value : ""}
-							onChange={(e) => handleChange(e.target.value ? Number(e.target.value) : null)}
+							value={typeof value === "number" ? value : null}
+							onValueChange={handleChange}
 							min={range.min}
 							max={range.max}
 							{...quiet}
@@ -3728,13 +3729,12 @@ function FieldRenderer({
 				);
 			}
 			return (
-				<Input
+				<LocalizedNumberInput
 					label={<span className={labelClass}>{label}</span>}
 					id={id}
-					type="number"
 					step={field.integer ? "1" : "any"}
-					value={typeof value === "number" ? value : ""}
-					onChange={(e) => handleChange(e.target.value ? Number(e.target.value) : null)}
+					value={typeof value === "number" ? value : null}
+					onValueChange={handleChange}
 					required={field.required}
 					min={range.min}
 					max={range.max}
@@ -3950,18 +3950,13 @@ function FieldRenderer({
 		case "datetime": {
 			const dateValue = toDatetimeLocalInputValue(value, timezone);
 			return (
-				<Input
+				<LocalizedDateTimeInput
 					label={quiet ? undefined : label}
 					id={id}
-					type="datetime-local"
-					value={dateValue}
-					onChange={(e) => {
-						try {
-							handleChange(fromDatetimeLocalInputValue(e.target.value, timezone));
-						} catch {
-							handleChange(e.target.value);
-						}
-					}}
+					value={value}
+					timezone={timezone}
+					onValueChange={handleChange}
+					readOnly={readOnly}
 					required={quiet ? undefined : field.required}
 					{...quiet}
 					className={
@@ -4877,7 +4872,7 @@ function FileFieldRenderer({
 	describedBy,
 	invalid,
 }: FileFieldRendererProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const [pickerOpen, setPickerOpen] = React.useState(false);
 	const labelled = labelledBy !== undefined;
 	const errorId = React.useId();
@@ -5028,18 +5023,21 @@ function FileFieldRenderer({
 								href={normalized.displayUrl}
 								target="_blank"
 								rel="noopener noreferrer"
+								dir="auto"
 								className="block truncate text-base font-medium hover:underline"
 							>
 								{normalized.filename}
 							</a>
 						) : (
-							<p className="truncate text-base font-medium">{normalized.filename}</p>
+							<p dir="auto" className="truncate text-base font-medium">
+								{normalized.filename}
+							</p>
 						)}
 						{(hasMime || hasSize) && (
 							<p className="text-xs text-kumo-subtle">
 								{hasMime ? normalized.mimeType : null}
 								{hasMime && hasSize ? " • " : null}
-								{hasSize ? formatFileSize(size) : null}
+								{hasSize ? formatFileSize(size, i18n.locale) : null}
 							</p>
 						)}
 					</div>

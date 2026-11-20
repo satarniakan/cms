@@ -372,6 +372,7 @@ function SummaryMetrics({
 	/** Link the Scheduled count to the calendar, for roles that can open it. */
 	linkCalendar: boolean;
 }) {
+	const { i18n } = useLingui();
 	if (loading) {
 		return (
 			<div className="grid gap-4 sm:grid-cols-3">
@@ -461,7 +462,7 @@ function SummaryMetrics({
 					</DashboardCardHeading>
 					<LayerCard.Primary className="text-3xl font-semibold leading-none tabular-nums">
 						<DashboardCardInset data-testid="dashboard-metric-value">
-							{metric.value}
+							{i18n.number(metric.value)}
 						</DashboardCardInset>
 					</LayerCard.Primary>
 				</LayerCard>
@@ -558,12 +559,13 @@ function CountBadge({
 	variant: "success" | "warning";
 	label: string;
 }) {
+	const { i18n } = useLingui();
 	if (count === 0) return null;
 	return (
 		<Badge variant={variant} className="gap-1 tabular-nums">
 			<Icon className="h-3 w-3" aria-hidden="true" />
 			<span className="sr-only">{label}</span>
-			{count}
+			{i18n.number(count)}
 		</Badge>
 	);
 }

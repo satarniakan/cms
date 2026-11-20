@@ -6,15 +6,7 @@
  * D1 Time Travel for point-in-time restore on Cloudflare.
  */
 
-import {
-	Banner,
-	Button,
-	Input,
-	LinkButton,
-	Loader,
-	Switch,
-	useKumoToastManager,
-} from "@cloudflare/kumo";
+import { Banner, Button, LinkButton, Loader, Switch, useKumoToastManager } from "@cloudflare/kumo";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { DownloadSimple, Trash } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,16 +24,22 @@ import {
 } from "../../lib/api/backups.js";
 import { ConfirmDialog } from "../ConfirmDialog.js";
 import { getMutationError } from "../DialogError.js";
+import { LocalizedNumberInput } from "../LocalizedNumberInput.js";
 import { SaveButton } from "../SaveButton.js";
 import { SettingRow, SettingsFrame, SettingsSection } from "./SettingsLayout.js";
 
-function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function formatBytes(bytes: number, locale: string): string {
+	const divisor = bytes < 1024 ? 1 : bytes < 1024 * 1024 ? 1024 : 1024 * 1024;
+	return new Intl.NumberFormat(locale, {
+		style: "unit",
+		unitDisplay: locale === "fa" ? "long" : "short",
+		unit: divisor === 1 ? "byte" : divisor === 1024 ? "kilobyte" : "megabyte",
+		minimumFractionDigits: divisor === 1 ? 0 : 1,
+		maximumFractionDigits: divisor === 1 ? 0 : 1,
+	}).format(bytes / divisor);
 }
 
-function backupSettingsSnapshot(enabled: boolean, retention: string) {
+function backupSettingsSnapshot(enabled: boolean, retention: number | null) {
 	return JSON.stringify({ enabled, retention });
 }
 
@@ -61,14 +59,14 @@ export function BackupSettings() {
 	});
 
 	const [enabled, setEnabled] = React.useState(false);
-	const [retention, setRetention] = React.useState("7");
+	const [retention, setRetention] = React.useState<number | null>(7);
 	const [savedEnabled, setSavedEnabled] = React.useState(false);
-	const [savedRetention, setSavedRetention] = React.useState("7");
+	const [savedRetention, setSavedRetention] = React.useState(7);
 	const seeded = React.useRef(false);
 	React.useEffect(() => {
 		if (overview && !seeded.current) {
 			seeded.current = true;
-			const loadedRetention = String(overview.settings.retention);
+			const loadedRetention = overview.settings.retention;
 			setEnabled(overview.settings.enabled);
 			setRetention(loadedRetention);
 			setSavedEnabled(overview.settings.enabled);
@@ -84,13 +82,9 @@ export function BackupSettings() {
 	);
 
 	const saveMutation = useMutation({
-		mutationFn: () => {
-			const parsed = Number.parseInt(retention, 10);
-			const clamped = Number.isNaN(parsed) ? 7 : Math.min(30, Math.max(1, parsed));
-			return updateBackupSettings({ enabled, retention: clamped });
-		},
+		mutationFn: updateBackupSettings,
 		onSuccess: (settings) => {
-			const savedRetentionValue = String(settings.retention);
+			const savedRetentionValue = settings.retention;
 			setEnabled(settings.enabled);
 			setRetention(savedRetentionValue);
 			setSavedEnabled(settings.enabled);
@@ -138,7 +132,8 @@ export function BackupSettings() {
 
 	const handleSave = (event: React.FormEvent) => {
 		event.preventDefault();
-		saveMutation.mutate();
+		if (retention === null) return;
+		saveMutation.mutate({ enabled, retention });
 	};
 
 	const title = t`Backups`;
@@ -214,7 +209,7 @@ export function BackupSettings() {
 					</SettingRow>
 				</SettingsSection>
 
-				<form id="automatic-backups-form" onSubmit={handleSave} noValidate>
+				<form id="automatic-backups-form" onSubmit={handleSave}>
 					<SettingsSection
 						title={t`Automatic Backups`}
 						description={t`Store a daily backup in your site's storage bucket. Old backups are removed automatically.`}
@@ -243,29 +238,17 @@ export function BackupSettings() {
 									/>
 								</SettingRow>
 								<SettingRow>
-									<div className="grid gap-4 sm:grid-cols-2 sm:items-center">
-										<div className="grid gap-1">
-											<label
-												id="backup-retention-label"
-												htmlFor="backup-retention"
-												className="text-sm font-medium"
-											>
-												{t`Backups to keep`}
-											</label>
-										</div>
-										<div className="flex justify-end">
-											<Input
-												id="backup-retention"
-												aria-labelledby="backup-retention-label"
-												className="w-full max-w-48"
-												type="number"
-												min={1}
-												max={30}
-												value={retention}
-												onChange={(event) => setRetention(event.target.value)}
-											/>
-										</div>
-									</div>
+									<LocalizedNumberInput
+										id="backup-retention"
+										label={t`Backups to keep`}
+										className="w-full max-w-48"
+										step="1"
+										required
+										min={1}
+										max={30}
+										value={retention}
+										onValueChange={setRetention}
+									/>
 								</SettingRow>
 							</>
 						) : (
@@ -310,7 +293,7 @@ export function BackupSettings() {
 												dateStyle: "medium",
 												timeStyle: "short",
 											})}{" "}
-											· {formatBytes(archive.size)}
+											· {formatBytes(archive.size, i18n.locale)}
 										</div>
 									</div>
 									<div className="flex shrink-0 self-end items-center gap-2 sm:self-center">

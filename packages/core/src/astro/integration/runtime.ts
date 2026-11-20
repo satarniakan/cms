@@ -670,6 +670,8 @@ export interface EmDashConfig {
 	 * ```
 	 */
 	admin?: {
+		/** Fix the admin language independently of browser preferences and cookies. */
+		locale?: string;
 		/** URL or path to a custom logo image for the admin UI (login page, sidebar). */
 		logo?: string;
 		/** Custom name displayed in the admin sidebar header and browser tab. */

@@ -12,8 +12,8 @@ export interface BlogSiteIdentitySettings {
 	favicon?: MediaReference;
 }
 
-const DEFAULT_SITE_TITLE = "My Blog";
-const DEFAULT_SITE_TAGLINE = "Thoughts, stories, and ideas.";
+const DEFAULT_SITE_TITLE = "ام‌دش فارسی";
+const DEFAULT_SITE_TAGLINE = "جایی برای نوشته‌ها، داستان‌ها و ایده‌های شما";
 
 export function resolveBlogSiteIdentity(settings?: BlogSiteIdentitySettings) {
 	return {

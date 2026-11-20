@@ -20,6 +20,7 @@ import {
 	type EmailSettings as EmailSettingsData,
 } from "../../lib/api/email-settings.js";
 import { getMutationError } from "../DialogError.js";
+import { LocalizedNumberInput } from "../LocalizedNumberInput.js";
 import { SettingRow, SettingsFrame, SettingsSection } from "./SettingsLayout.js";
 
 const SMTP_PROVIDER_ID = "emdash-builtin-smtp";
@@ -28,7 +29,7 @@ const PROVIDER_LABELS: Record<string, MessageDescriptor> = {
 };
 
 export function EmailSettings() {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const toastManager = useKumoToastManager();
 	const queryClient = useQueryClient();
 	const [testEmail, setTestEmail] = React.useState("");
@@ -36,7 +37,7 @@ export function EmailSettings() {
 	// "smtp", a plugin ID verbatim, or "" while nothing is selected
 	const [provider, setProvider] = React.useState("");
 	const [smtpHost, setSmtpHost] = React.useState("");
-	const [smtpPort, setSmtpPort] = React.useState("587");
+	const [smtpPort, setSmtpPort] = React.useState<number | null>(587);
 	const [smtpSecure, setSmtpSecure] = React.useState<"starttls" | "tls">("starttls");
 	const [smtpUser, setSmtpUser] = React.useState("");
 	const [smtpPass, setSmtpPass] = React.useState("");
@@ -67,7 +68,7 @@ export function EmailSettings() {
 		}
 		if (settings.smtp.configured) {
 			if (settings.smtp.host) setSmtpHost(settings.smtp.host);
-			if (settings.smtp.port) setSmtpPort(String(settings.smtp.port));
+			if (settings.smtp.port) setSmtpPort(settings.smtp.port);
 			if (settings.smtp.secure) setSmtpSecure(settings.smtp.secure);
 			if (settings.smtp.user) setSmtpUser(settings.smtp.user);
 			if (settings.smtp.fromName) setSmtpFromName(settings.smtp.fromName);
@@ -120,8 +121,8 @@ export function EmailSettings() {
 				});
 				return;
 			}
-			const port = Number.parseInt(smtpPort, 10);
-			if (Number.isNaN(port) || port < 1 || port > 65535) {
+			const port = smtpPort;
+			if (port === null || !Number.isInteger(port) || port < 1 || port > 65535) {
 				toastManager.add({
 					title: t`Invalid port`,
 					description: t`Port must be between 1 and 65535.`,
@@ -236,25 +237,27 @@ export function EmailSettings() {
 								<div className="grid gap-4">
 									<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 										<Input
+											dir="ltr"
 											label={t`SMTP Host`}
 											value={smtpHost}
 											onChange={(event) => setSmtpHost(event.target.value)}
 											placeholder={t`smtp.example.com`}
 											required
 										/>
-										<Input
+										<LocalizedNumberInput
 											label={t`Port`}
-											type="number"
 											value={smtpPort}
-											onChange={(event) => {
-												setSmtpPort(event.target.value);
+											onValueChange={(port) => {
+												setSmtpPort(port);
 												if (!smtpSecureTouched) {
-													const port = Number.parseInt(event.target.value, 10);
 													if (port === 465) setSmtpSecure("tls");
 													else if (port === 587) setSmtpSecure("starttls");
 												}
 											}}
-											placeholder="587"
+											placeholder={i18n.number(587, { useGrouping: false })}
+											step="1"
+											min={1}
+											max={65535}
 											required
 										/>
 										<Select
@@ -270,6 +273,7 @@ export function EmailSettings() {
 											]}
 										/>
 										<Input
+											dir="ltr"
 											label={t`Username`}
 											value={smtpUser}
 											onChange={(event) => setSmtpUser(event.target.value)}
@@ -277,6 +281,8 @@ export function EmailSettings() {
 											required
 										/>
 										<Input
+											dir="ltr"
+											className="rtl:placeholder:text-end"
 											label={t`Password`}
 											type="password"
 											value={smtpPass}
@@ -294,6 +300,7 @@ export function EmailSettings() {
 											placeholder={t`Site Name`}
 										/>
 										<Input
+											dir="ltr"
 											label={t`Sender email (optional)`}
 											type="email"
 											value={smtpFromEmail}
@@ -301,6 +308,7 @@ export function EmailSettings() {
 											placeholder={t`noreply@example.com`}
 										/>
 										<Input
+											dir="ltr"
 											label={t`Reply-to email (optional)`}
 											type="email"
 											value={smtpReplyTo}
@@ -340,11 +348,17 @@ export function EmailSettings() {
 								<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 									<div className="grid gap-1">
 										<p className="text-sm font-medium text-kumo-subtle">{t`Host`}</p>
-										<p className="font-mono text-sm break-all">{settings.smtp.host}</p>
+										<p className="font-mono text-sm break-all">
+											<bdi dir="ltr">{settings.smtp.host}</bdi>
+										</p>
 									</div>
 									<div className="grid gap-1">
 										<p className="text-sm font-medium text-kumo-subtle">{t`Port`}</p>
-										<p className="font-mono text-sm">{settings.smtp.port}</p>
+										<p className="text-sm">
+											{settings.smtp.port === undefined
+												? ""
+												: i18n.number(settings.smtp.port, { useGrouping: false })}
+										</p>
 									</div>
 									<div className="grid gap-1">
 										<p className="text-sm font-medium text-kumo-subtle">{t`Security`}</p>
@@ -356,16 +370,25 @@ export function EmailSettings() {
 										<div className="grid gap-1">
 											<p className="text-sm font-medium text-kumo-subtle">{t`Sender email`}</p>
 											<p className="font-mono text-sm break-all">
-												{settings.smtp.fromName
-													? `${settings.smtp.fromName} <${settings.smtp.fromEmail}>`
-													: settings.smtp.fromEmail}
+												{settings.smtp.fromName && (
+													<>
+														<bdi>{settings.smtp.fromName}</bdi>{" "}
+													</>
+												)}
+												<bdi dir="ltr">
+													{settings.smtp.fromName
+														? `<${settings.smtp.fromEmail}>`
+														: settings.smtp.fromEmail}
+												</bdi>
 											</p>
 										</div>
 									)}
 									{settings.smtp.replyTo && (
 										<div className="grid gap-1">
 											<p className="text-sm font-medium text-kumo-subtle">{t`Reply-to`}</p>
-											<p className="font-mono text-sm break-all">{settings.smtp.replyTo}</p>
+											<p className="font-mono text-sm break-all">
+												<bdi dir="ltr">{settings.smtp.replyTo}</bdi>
+											</p>
 										</div>
 									)}
 								</div>
